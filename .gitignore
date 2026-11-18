@@ -1,0 +1,10 @@
+buildoutput/**
+staging/**
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.history/
+.vs
+**/test.ps1
+*.pfx
+*.cer

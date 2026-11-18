@@ -1,0 +1,144 @@
+name: Bug report
+description: Report a problem with OmadaSql.PS
+title: "[Bug]: "
+labels: ["bug", "triage"]
+type: "Bug"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Please fill in as much detail as possible - this speeds up triage significantly.
+
+        **Never paste client secrets, certificate private keys, tokens or cookies.** Mask tenant URLs, object ids and query results that contain personal data.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: A clear and concise description of the bug.
+      placeholder: What happened? What did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro-steps
+    attributes:
+      label: Steps to reproduce
+      description: Step-by-step instructions, including the cmdlet calls and parameters used (mask secrets and tenant-specific values).
+      placeholder: |
+        1. `Connect-OmadaSql -Url "https://example.omada.cloud" -AuthenticationType OAuth ...`
+        2. `Invoke-OmadaSqlQuery -Query "SELECT TOP 10 [Id] = Id FROM dbo.tblDataObject" -DataConnection "OISES"`
+        3. See error
+    validations:
+      required: true
+
+  - type: textarea
+    id: error-output
+    attributes:
+      label: Error output / exception
+      description: Paste the full error record (`$Error[0] | Format-List * -Force`) and, where useful, the `-Verbose` output. This will be automatically formatted as code.
+      render: shell
+    validations:
+      required: false
+
+  - type: input
+    id: module-version
+    attributes:
+      label: OmadaSql.PS version
+      description: Output of `Get-Module OmadaSql.PS -ListAvailable | Select-Object Version`
+      placeholder: e.g. 2026.11.18.1
+    validations:
+      required: true
+
+  - type: input
+    id: omadawebps-version
+    attributes:
+      label: OmadaWeb.PS version
+      description: Output of `Get-Module OmadaWeb.PS -ListAvailable | Select-Object Version`
+      placeholder: e.g. 2026.9.23.47
+    validations:
+      required: true
+
+  - type: input
+    id: powershell-version
+    attributes:
+      label: PowerShell version
+      description: Output of `$PSVersionTable.PSVersion`
+      placeholder: e.g. 5.1.19041 or 7.4.6
+    validations:
+      required: true
+
+  - type: input
+    id: os-version
+    attributes:
+      label: Windows version
+      description: Output of `[System.Environment]::OSVersion.Version` or `winver`
+      placeholder: e.g. Windows 11 23H2 (build 22631)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: auth-type
+    attributes:
+      label: Authentication type
+      description: Which authentication was used to connect?
+      options:
+        - OAuth - certificate
+        - OAuth - client secret
+        - Browser / WebView2 (interactive)
+        - Other / not applicable
+    validations:
+      required: true
+
+  - type: input
+    id: cmdlet-used
+    attributes:
+      label: Cmdlet
+      description: Which cmdlet were you using?
+      placeholder: e.g. Invoke-OmadaSqlQuery, Get-OmadaSqlSchema, Set-OmadaSqlQuery
+    validations:
+      required: true
+
+  - type: dropdown
+    id: query-source
+    attributes:
+      label: Query source
+      description: For query execution issues - how was the query supplied?
+      options:
+        - Ad-hoc query text or file (temporary query object)
+        - Existing SQL Troubleshooting object in Omada
+        - Not applicable
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What did you expect to happen?
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: |
+        Anything else that might be relevant, e.g.:
+        - Whether the same query works in the SQL Troubleshooting page in Omada or in OmadaSqlTroubleshooter
+        - Whether -SkipValidation changes the outcome, and which diagnostic (OMDxxx or a syntax error) was reported
+        - Multi-statement scripts, database-name prefixes or USE statements in the query
+        - The OData permissions (Read, Create, Update, Delete) of the signed-in identity
+        - Omada Identity Cloud version, if known
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues to confirm this hasn't already been reported
+          required: true
+        - label: I have removed or masked secrets, tokens, tenant-identifying values and personal data from the details above
+          required: true
