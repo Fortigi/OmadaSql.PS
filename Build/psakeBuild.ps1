@@ -330,6 +330,7 @@ Task ImportModule -depends Build {
 # survived being concatenated into the single .psm1 that ships to the Gallery.
 Task TestHelp -depends ImportModule {
     & (Join-Path $PSScriptRoot -ChildPath "Test-CommentBasedHelp.ps1") -ModuleManifestPath (Join-Path -Path $OutputDir -ChildPath ("{0}.psd1" -f $ModuleName))
+    & (Join-Path $PSScriptRoot -ChildPath "Update-ReadmeHelp.ps1") -Check -ModuleManifestPath (Join-Path -Path $OutputDir -ChildPath ("{0}.psd1" -f $ModuleName))
 }
 
 Task Test -depends ImportModule {

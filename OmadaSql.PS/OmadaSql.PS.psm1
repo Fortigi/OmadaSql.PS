@@ -14,6 +14,16 @@ if ($PSVersionTable.PSVersion.Major -ge 6 -and !$IsWindows) {
     "{0} is only supported on Windows (Windows PowerShell 5.1 or PowerShell 7)." -f $Script:ModuleName | Write-Error -ErrorAction "Stop"
 }
 
+# Connections made with Connect-OmadaSql, keyed by connection id. Each entry holds the public
+# connection object and, separately, the Invoke-OmadaRestMethod parameters, which can contain a
+# PSCredential, a certificate or a SecureString and are therefore never returned to the caller.
+$Script:OmadaSqlConnectionStore = @{}
+$Script:OmadaSqlCurrentConnectionId = $null
+# Creation order of the connections, so Get-OmadaSqlConnection -All lists them in a stable order.
+$Script:OmadaSqlConnectionSequence = 0
+# Parameter names of the loaded Invoke-OmadaRestMethod, resolved once (see Test-OmadaSqlRestMethodParameter).
+$Script:OmadaSqlRestMethodParameterCache = $null
+
 #region exclude
 # Source mode only: the build replaces this region with the inlined Public and Private functions.
 $Public = @(Get-ChildItem -Path (Join-Path -Path $PSScriptRoot -ChildPath "Public\*.ps1") -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike "_*.ps1" })

@@ -57,7 +57,9 @@ values. Commands that change state in Omada support `-WhatIf` and `-Confirm`.
 
 Every exported command needs comment-based help with a synopsis, a description, a `.PARAMETER`
 entry per parameter, at least three examples and a related link; `Build/Test-CommentBasedHelp.ps1`
-fails the build otherwise. Add each new public command to `Build/PublicCommands.psd1`.
+fails the build otherwise. Add each new public command to `Build/PublicCommands.psd1`, and run
+`./Build/Update-ReadmeHelp.ps1` to regenerate the command table in the README: the build fails while
+it is out of date.
 
 ## Complexity and mutation gates
 

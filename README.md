@@ -16,15 +16,28 @@ All sign-in and every request go through [OmadaWeb.PS](https://github.com/Fortig
 every authentication type it supports is available, including unattended OAuth with a client
 certificate.
 
-> **Status: in development.** The repository framework is in place; the commands below are being
-> built phase by phase as described in [docs/PLAN.md](docs/PLAN.md). Nothing is published to the
-> PowerShell Gallery yet.
+> **Status: in development.** The connection commands are in place; the rest is being built phase
+> by phase as described in [docs/PLAN.md](docs/PLAN.md). Nothing is published to the PowerShell
+> Gallery yet.
+
+## COMMANDS
+
+<!-- BEGIN GENERATED COMMANDS -->
+
+| Command | Synopsis |
+|---|---|
+| `Connect-OmadaSql` | Connects to an Omada Identity Cloud tenant for SQL Troubleshooting commands. |
+| `Disconnect-OmadaSql` | Removes a connection made with Connect-OmadaSql. |
+| `Get-OmadaSqlConnection` | Returns the current connection, or every connection. |
+
+_Generated from the comment-based help by `Build/Update-ReadmeHelp.ps1`. Run `Get-Help <Command> -Full` for syntax, parameters and examples._
+
+<!-- END GENERATED COMMANDS -->
 
 ## PLANNED COMMANDS
 
 | Area | Commands |
 |---|---|
-| Connection | `Connect-OmadaSql`, `Disconnect-OmadaSql`, `Get-OmadaSqlConnection` |
 | Data connections | `Get-OmadaSqlDataConnection` |
 | Query execution | `Invoke-OmadaSqlQuery` (existing SQL Troubleshooting objects, or ad-hoc SQL through a temporary query object; database-name prefixes and `USE` resolved to data connections) |
 | Validation | `Test-OmadaSqlQuery` (T-SQL syntax, Omada compatibility rules, schema warnings); `-SkipValidation` on `Invoke-OmadaSqlQuery` |
@@ -58,6 +71,32 @@ From a local build:
 ./Build/build.ps1 -Task Build
 ./deploy.ps1 -Scope CurrentUser
 ```
+
+## USAGE
+
+```powershell
+# Unattended, with a client certificate in the certificate store
+Connect-OmadaSql -Url 'https://tenant.omada.cloud' -AuthenticationType OAuth `
+    -ClientId '<application id>' -OAuthCertificateThumbprint '<thumbprint>' -EntraIdTenantId '<tenant>'
+
+# Interactive
+Connect-OmadaSql -Url 'https://tenant.omada.cloud'
+```
+
+Every command throws a terminating error whose `FullyQualifiedErrorId` starts with
+`OmadaSql.<Kind>`, so a script can act on the cause without parsing messages:
+
+| Kind | Meaning |
+|---|---|
+| `NotConnected` | No connection; run `Connect-OmadaSql`. |
+| `EndpointNotEnabled` | The `C_P_SQLTROUBLESHOOTING` OData endpoint is not enabled on the tenant. |
+| `SessionExpired` | No valid session (HTTP 401), or an expired session with `-NoInteractiveAuthentication`. |
+| `MissingPermission` | A write over OData was refused after a successful read: the identity lacks Create, Update or Delete on the `OData` auth element. |
+| `AccessDenied`, `NotFound`, `ServerError`, `RequestFailed` | HTTP 403, 404, 5xx and anything else. A SQL error arrives as a generic 500. |
+| `InvalidArgument` | A parameter combination was refused before anything was sent. |
+
+`-Verbose` shows each request (method, URI, duration, outcome); secrets are masked and request
+bodies, which can hold query text, are never written.
 
 ## CONTRIBUTING AND SECURITY
 
