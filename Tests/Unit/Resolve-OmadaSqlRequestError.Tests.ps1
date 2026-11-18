@@ -156,3 +156,24 @@ Describe 'Get-OmadaSqlRequestErrorMessage' -Tag 'Unit' {
         }
     }
 }
+
+Describe 'Get-OmadaSqlErrorDetail' -Tag 'Unit' {
+    It 'Puts the response body first, then every distinct exception message in the chain' {
+        $Inner = [System.Exception]::new("Resource not found for the segment 'C_P_SQLTROUBLESHOOTING'.")
+        $ErrorRecord = [System.Management.Automation.ErrorRecord]::new([System.Exception]::new('outer', $Inner), 'Test', [System.Management.Automation.ErrorCategory]::InvalidOperation, $null)
+        $ErrorRecord.ErrorDetails = [System.Management.Automation.ErrorDetails]::new('body text')
+        InModuleScope 'OmadaSql.PS' -Parameters @{ ErrorRecord = $ErrorRecord } {
+            param($ErrorRecord)
+            Get-OmadaSqlErrorDetail -ErrorRecord $ErrorRecord | Should -Be "body text | outer | Resource not found for the segment 'C_P_SQLTROUBLESHOOTING'."
+        }
+    }
+
+    It 'Classifies a missing segment reported only in an inner exception as EndpointNotEnabled' {
+        $Inner = [System.Exception]::new("Resource not found for the segment 'C_P_SQLTROUBLESHOOTING'.")
+        $ErrorRecord = [System.Management.Automation.ErrorRecord]::new([System.Exception]::new('Response status code does not indicate success: 404 (Not Found).', $Inner), 'Test', [System.Management.Automation.ErrorCategory]::InvalidOperation, $null)
+        InModuleScope 'OmadaSql.PS' -Parameters @{ ErrorRecord = $ErrorRecord } {
+            param($ErrorRecord)
+            (Resolve-OmadaSqlRequestError -ErrorRecord $ErrorRecord -Method GET -Uri 'https://tenant.omada.cloud/odata/dataobjects/C_P_SQLTROUBLESHOOTING').Kind | Should -Be 'EndpointNotEnabled'
+        }
+    }
+}

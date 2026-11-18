@@ -10,9 +10,10 @@ function Invoke-OmadaSqlRequest {
     Invoke-OmadaRestMethod, so nothing below it is ever reached in a test.
 
     A body that is not already a string is serialized with ConvertTo-Json -Depth 20 (the default
-    depth of 2 silently truncates nested bodies). It is sent as application/json with an explicit
-    UTF-8 charset, so query text outside ASCII arrives intact on both PowerShell editions. Some ASMX
-    methods want a body that was serialized separately; pass those as a string.
+    depth of 2 silently truncates nested bodies). Some ASMX methods want a body that was serialized
+    separately; pass those as a string. Either way the JSON is sent as UTF-8 bytes: Windows
+    PowerShell 5.1 encodes a string body as ISO-8859-1 whatever charset the content type names, which
+    turns query text outside Latin-1 into question marks (found by the integration tests).
 
     The request body and the response are never written to the Verbose stream: both can hold query
     text and personal data. Only the method, the URI and the outcome are.
@@ -41,12 +42,11 @@ function Invoke-OmadaSqlRequest {
     $Parameters.ContentType = 'application/json; charset=utf-8'
     $Parameters.ErrorAction = 'Stop'
     if ($null -ne $Body) {
-        if ($Body -is [string]) {
-            $Parameters.Body = $Body
+        $Json = $Body
+        if ($Body -isnot [string]) {
+            $Json = ConvertTo-Json -InputObject $Body -Depth 20 -Compress
         }
-        else {
-            $Parameters.Body = ConvertTo-Json -InputObject $Body -Depth 20 -Compress
-        }
+        $Parameters.Body = [System.Text.Encoding]::UTF8.GetBytes([string]$Json)
     }
 
     Write-OmadaSqlLog -Message ("{0} {1}" -f $Method, $Uri)

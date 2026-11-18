@@ -106,7 +106,10 @@ Describe 'Invoke-OmadaSqlRequest through OmadaWeb.PS' -Tag 'Integration' {
         $Body = '{"error":{"code":"","message":"Resource not found for the segment ''C_P_SQLTROUBLESHOOTING''."}}'
         Set-OmadaSqlMockRoute -Server $Script:Server -Method GET -Path "$($Script:ODataPath)?`$top=1" -StatusCode 404 -Body $Body
 
-        (Get-TestRequestError -Method GET -Path "$($Script:ODataPath)?`$top=1").FullyQualifiedErrorId | Should -BeLike 'OmadaSql.EndpointNotEnabled*'
+        $ErrorRecord = Get-TestRequestError -Method GET -Path "$($Script:ODataPath)?`$top=1"
+        $Inner = $ErrorRecord.Exception.InnerException
+        $Diagnostic = "message: {0}; inner: {1}" -f $ErrorRecord.Exception.Message, $(if ($null -ne $Inner) { '{0}: {1}' -f $Inner.GetType().FullName, $Inner.Message } else { '<none>' })
+        $ErrorRecord.FullyQualifiedErrorId | Should -BeLike 'OmadaSql.EndpointNotEnabled*' -Because $Diagnostic
     }
 
     It 'Classifies HTTP 401 on a read as SessionExpired' {

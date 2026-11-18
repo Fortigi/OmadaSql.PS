@@ -33,10 +33,7 @@ function Resolve-OmadaSqlRequestError {
     )
 
     $StatusCode = Get-OmadaSqlHttpStatusCode -ErrorRecord $ErrorRecord
-    $Detail = [string]$ErrorRecord.Exception.Message
-    if ($null -ne $ErrorRecord.ErrorDetails -and -not [string]::IsNullOrWhiteSpace($ErrorRecord.ErrorDetails.Message)) {
-        $Detail = [string]$ErrorRecord.ErrorDetails.Message
-    }
+    $Detail = Get-OmadaSqlErrorDetail -ErrorRecord $ErrorRecord
     $UpperMethod = $Method.ToUpperInvariant()
 
     $KindParameter = @{
@@ -53,6 +50,40 @@ function Resolve-OmadaSqlRequestError {
         StatusCode = $StatusCode
         Message    = Get-OmadaSqlRequestErrorMessage -Kind $Kind -Method $UpperMethod -Uri $Uri -StatusCode $StatusCode -Detail $Detail
     }
+}
+
+function Get-OmadaSqlErrorDetail {
+    <#
+    .SYNOPSIS
+    The most specific text a failed request carries: the response body when there is one.
+
+    .DESCRIPTION
+    Invoke-RestMethod puts the response body in ErrorDetails.Message; a wrapper may instead carry it
+    in the exception or an inner exception. The response body comes first, followed by every distinct
+    exception message in the chain, so a classification that looks for a phrase finds it wherever it
+    ended up.
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory = $true)]
+        $ErrorRecord
+    )
+
+    $Text = [System.Collections.Generic.List[string]]::new()
+    if ($null -ne $ErrorRecord.ErrorDetails -and -not [string]::IsNullOrWhiteSpace($ErrorRecord.ErrorDetails.Message)) {
+        $Text.Add([string]$ErrorRecord.ErrorDetails.Message)
+    }
+    $Exception = $ErrorRecord.Exception
+    $Depth = 0
+    while ($null -ne $Exception -and $Depth -lt 8) {
+        $Depth++
+        if (-not [string]::IsNullOrWhiteSpace($Exception.Message) -and -not $Text.Contains($Exception.Message)) {
+            $Text.Add($Exception.Message)
+        }
+        $Exception = $Exception.InnerException
+    }
+    return ($Text -join ' | ')
 }
 
 function Get-OmadaSqlRequestErrorKind {

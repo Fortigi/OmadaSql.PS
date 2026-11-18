@@ -43,7 +43,7 @@ Describe 'Invoke-OmadaSqlRequest' -Tag 'Unit' {
             $null = Invoke-OmadaSqlRequest -Context $Context -Method POST -Path 'webservice/x.asmx/Y' -Body $Body
         }
         Should -Invoke Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter {
-            $Body -is [string] -and (ConvertFrom-Json -InputObject $Body).dataTypeArgs.level1.level2.level3 -eq 'deep'
+            $Body -is [byte[]] -and (ConvertFrom-Json -InputObject ([System.Text.Encoding]::UTF8.GetString($Body))).dataTypeArgs.level1.level2.level3 -eq 'deep'
         }
     }
 
@@ -53,7 +53,19 @@ Describe 'Invoke-OmadaSqlRequest' -Tag 'Unit' {
             param($Context)
             $null = Invoke-OmadaSqlRequest -Context $Context -Method POST -Path 'WebService/DataObjectWebService.asmx/UndeleteDataObject' -Body '{"id":42}'
         }
-        Should -Invoke Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { $Body -eq '{"id":42}' }
+        Should -Invoke Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { $Body -is [byte[]] -and [System.Text.Encoding]::UTF8.GetString($Body) -eq '{"id":42}' }
+    }
+
+    It 'Encodes characters outside Latin-1 as UTF-8' {
+        Mock Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' { $null }
+        InModuleScope 'OmadaSql.PS' -Parameters @{ Context = $Script:Context } {
+            param($Context)
+            $null = Invoke-OmadaSqlRequest -Context $Context -Method POST -Path 'odata/x' -Body ('{{"q":"{0}"}}' -f [char]0x20AC)
+        }
+        Should -Invoke Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter {
+            # The euro sign is three bytes in UTF-8 (E2 82 AC); ISO-8859-1 cannot encode it at all.
+            ($Body[6..8] -join ',') -eq '226,130,172'
+        }
     }
 
     It 'Does not change the stored connection parameters' {
