@@ -379,7 +379,7 @@ function Format-ComplexityViolationMarkdown {
         $Units = ($Group.Group | Sort-Object -Property Cognitive -Descending | ForEach-Object {
                 '`{0}` (cyclomatic {1}, cognitive {2})' -f $_.Unit, $_.Cyclomatic, $_.Cognitive
             }) -join '; '
-        '- [ ] `{0}` — {1}' -f $Group.Name, $Units
+        '- [ ] `{0}` - {1}' -f $Group.Name, $Units
     }
     return ($Lines -join "`n")
 }
@@ -413,10 +413,10 @@ function Format-MutationSurvivorMarkdown {
     $Blocks = foreach ($Group in $Groups) {
         $Summary = if ($ScoreByFile.ContainsKey($Group.Name)) {
             $Entry = $ScoreByFile[$Group.Name]
-            '`{0}` — {1}% ({2} of {3} survived)' -f $Group.Name, $Entry.score, $Entry.survived, $Entry.total
+            '`{0}` - {1}% ({2} of {3} survived)' -f $Group.Name, $Entry.score, $Entry.survived, $Entry.total
         }
         else {
-            '`{0}` — {1} survived' -f $Group.Name, $Group.Count
+            '`{0}` - {1} survived' -f $Group.Name, $Group.Count
         }
         $Items = $Group.Group | Sort-Object -Property Line | ForEach-Object {
             '- line {0}{1}: `{2}`' -f $_.Line, $(if ($_.Function) { " in ``$($_.Function)``" } else { '' }), $_.Description
@@ -552,7 +552,7 @@ function Invoke-MutationGate {
     $Report = Get-Content -LiteralPath $ReportFile -Raw | ConvertFrom-Json
 
     $Markdown = @(
-        '**Score {0}%** ({1} of {2} killed) — threshold {3}%.' -f $Result.Score, $Result.Killed, $Result.Total, $Setting.Thresholds.Break
+        '**Score {0}%** ({1} of {2} killed) - threshold {3}%.' -f $Result.Score, $Result.Killed, $Result.Total, $Setting.Thresholds.Break
     )
     if ($Result.FailureReason -and "$($Result.FailureReason)" -ne 'None') {
         $Markdown += ''

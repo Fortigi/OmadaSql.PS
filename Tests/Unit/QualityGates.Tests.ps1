@@ -276,8 +276,8 @@ Describe 'Format-ComplexityViolationMarkdown' {
         )
         $Lines = $Markdown -split "`n"
         $Lines.Count | Should -Be 2
-        $Lines[0] | Should -Be '- [ ] `src/b.ps1` — `B1` (cyclomatic 40, cognitive 90)'
-        $Lines[1] | Should -Be '- [ ] `src/a.ps1` — `A2` (cyclomatic 20, cognitive 30); `A1` (cyclomatic 16, cognitive 17)'
+        $Lines[0] | Should -Be '- [ ] `src/b.ps1` - `B1` (cyclomatic 40, cognitive 90)'
+        $Lines[1] | Should -Be '- [ ] `src/a.ps1` - `A2` (cyclomatic 20, cognitive 30); `A1` (cyclomatic 16, cognitive 17)'
     }
 
     It 'says so when there is nothing over the ceilings' {
@@ -295,7 +295,7 @@ Describe 'Format-MutationSurvivorMarkdown' {
             [pscustomobject]@{ file = 'src/weak.ps1'; score = 50; survived = 1; total = 2 }
         )
         $Markdown.IndexOf('src/weak.ps1') | Should -BeLessThan $Markdown.IndexOf('src/good.ps1')
-        $Markdown | Should -Match ([regex]::Escape('`src/weak.ps1` — 50% (1 of 2 survived)'))
+        $Markdown | Should -Match ([regex]::Escape('`src/weak.ps1` - 50% (1 of 2 survived)'))
         $Markdown | Should -Match ([regex]::Escape('- line 3 in `Get-Weak`: `0 -> 1`'))
     }
 

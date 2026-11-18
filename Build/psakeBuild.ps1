@@ -330,6 +330,7 @@ Task ImportModule -depends Build {
 # survived being concatenated into the single .psm1 that ships to the Gallery.
 Task TestHelp -depends ImportModule {
     & (Join-Path $PSScriptRoot -ChildPath "Test-CommentBasedHelp.ps1") -ModuleManifestPath (Join-Path -Path $OutputDir -ChildPath ("{0}.psd1" -f $ModuleName))
+    & (Join-Path $PSScriptRoot -ChildPath "Update-ReadmeHelp.ps1") -Check -ModuleManifestPath (Join-Path -Path $OutputDir -ChildPath ("{0}.psd1" -f $ModuleName))
 }
 
 Task Test -depends ImportModule {
@@ -370,6 +371,10 @@ Task Test -depends ImportModule {
     }
     finally {
         $Env:OMADASQLPS_STRICTMODE = $PreviousStrictMode
+        # Every copy the test files imported, in whatever scope, is removed: the mutation gate runs
+        # the tests again in this session, and Pester's InModuleScope refuses to run while two
+        # modules of the same name are loaded.
+        Get-Module -Name $ModuleName -All | Remove-Module -Force -ErrorAction SilentlyContinue
     }
 
     if ($Result.FailedCount -gt 0) {

@@ -31,7 +31,7 @@ try {
         }
 
         # PSGallery requires exactly 3-part version for pre-release packages (SemVer).
-        # Drop the 4th part (run number) — it is already encoded in the Prerelease string
+        # Drop the 4th part (run number) - it is already encoded in the Prerelease string
         # (e.g. 'nightly15'), giving a final version like 2026.7.3-nightly15.
         $Parts = ($ManifestData = Import-PowerShellDataFile -Path $Manifest.FullName).ModuleVersion -split '\.'
         if ($Parts.Count -eq 4) {

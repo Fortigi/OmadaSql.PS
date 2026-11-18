@@ -67,10 +67,10 @@ DLL not being hash-pinned.
 
 Each phase is one pull request, test first.
 
-0. **Repository framework** - build, tests, workflows, ruleset as code, issue templates, docs. *(this PR)*
+0. **Repository framework** - build, tests, workflows, ruleset as code, issue templates, docs. *(done)*
 1. **Core** - connection object, request core, error classification (session expired, 401, missing
    OData permission, endpoint not enabled), redaction, Verbose/Debug logging. Add the README command
-   generator with the first public commands.
+   generator with the first public commands. *(in progress)*
 2. **Objects** - data connections, CRUD, history, overview, temporary-object listing and cleanup.
 3. **ScriptDom** - bundling (dependency lock, Dependabot `nuget`, SBOM), statement splitting,
    database-name resolution, rules and syntax checker.

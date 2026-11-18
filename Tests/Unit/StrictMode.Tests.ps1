@@ -3,7 +3,7 @@ param(
 )
 
 BeforeAll {
-    Get-Module OmadaSql.PS | ForEach-Object { $_ | Remove-Module -Force -ErrorAction SilentlyContinue }
+    Get-Module -Name OmadaSql.PS -All | Remove-Module -Force -ErrorAction SilentlyContinue
     Import-Module $ModulePath -Force -ErrorAction Stop
 }
 
@@ -18,13 +18,13 @@ Describe 'StrictMode' -Tag 'Unit' {
             # Restored, and the module re-imported under it, so the files Pester runs after this one
             # see the same module state they would have seen had this file never run.
             $Env:OMADASQLPS_STRICTMODE = $Script:PreviousStrictModeFlag
-            Get-Module OmadaSql.PS | ForEach-Object { $_ | Remove-Module -Force -ErrorAction SilentlyContinue }
+            Get-Module -Name OmadaSql.PS -All | Remove-Module -Force -ErrorAction SilentlyContinue
             Import-Module $ModulePath -Force -ErrorAction Stop
         }
 
         It 'Should run module code under StrictMode when OMADASQLPS_STRICTMODE is 1' {
             $Env:OMADASQLPS_STRICTMODE = "1"
-            Get-Module OmadaSql.PS | ForEach-Object { $_ | Remove-Module -Force -ErrorAction SilentlyContinue }
+            Get-Module -Name OmadaSql.PS -All | Remove-Module -Force -ErrorAction SilentlyContinue
             Import-Module $ModulePath -Force -ErrorAction Stop
 
             InModuleScope 'OmadaSql.PS' {
@@ -37,7 +37,7 @@ Describe 'StrictMode' -Tag 'Unit' {
 
         It 'Should leave module code unstrict when OMADASQLPS_STRICTMODE is not set' {
             $Env:OMADASQLPS_STRICTMODE = $null
-            Get-Module OmadaSql.PS | ForEach-Object { $_ | Remove-Module -Force -ErrorAction SilentlyContinue }
+            Get-Module -Name OmadaSql.PS -All | Remove-Module -Force -ErrorAction SilentlyContinue
             Import-Module $ModulePath -Force -ErrorAction Stop
 
             InModuleScope 'OmadaSql.PS' {

@@ -24,7 +24,7 @@ one private function that calls `Invoke-OmadaRestMethod`, so a test mocks that o
 |---|---|---|
 | `Tests/Unit/<FunctionName>.Tests.ps1` | Pester unit tests for one function, usually via `InModuleScope 'OmadaSql.PS'`. Named after the function: the mutation gate maps a source file to its tests by that name. | Anything that is logic. Most tests belong here. |
 | `Tests/Unit/*.Tests.ps1` (other names) | Repository invariants: workflow pins and permissions, the ruleset, the quality gate configuration, release packaging. | When you add a rule about the repository itself. |
-| `Tests/Integration/*.Tests.ps1` | Tests that drive the public commands against a local `HttpListener` that answers like Omada's OData and web service endpoints. | Behaviour that only appears once a real HTTP response comes back: paging, error bodies, temporary-object cleanup. |
+| `Tests/Integration/*.Tests.ps1` | Tests that go through the real OmadaWeb.PS to a local `HttpListener` that answers like Omada (`Tests/Integration/Helpers/OmadaSqlMockServer.ps1`). | Behaviour that only appears once a real HTTP response comes back: the error records `Invoke-OmadaRestMethod` produces, body encoding, paging, temporary-object cleanup. |
 | Tests tagged `E2E` | Runs against a real Omada tenant. | Excluded from every build. There is no tenant-backed CI lane yet. |
 
 Three things worth knowing before you write one:
@@ -57,7 +57,9 @@ values. Commands that change state in Omada support `-WhatIf` and `-Confirm`.
 
 Every exported command needs comment-based help with a synopsis, a description, a `.PARAMETER`
 entry per parameter, at least three examples and a related link; `Build/Test-CommentBasedHelp.ps1`
-fails the build otherwise. Add each new public command to `Build/PublicCommands.psd1`.
+fails the build otherwise. Add each new public command to `Build/PublicCommands.psd1`, and run
+`./Build/Update-ReadmeHelp.ps1` to regenerate the command table in the README: the build fails while
+it is out of date.
 
 ## Complexity and mutation gates
 
