@@ -34,6 +34,20 @@ Describe 'New-OmadaSqlRequestParameter' -Tag 'Unit' {
         }
     }
 
+    It 'Does not pass on a parameter that was supplied as null' {
+        InModuleScope 'OmadaSql.PS' {
+            $Result = New-OmadaSqlRequestParameter -BoundParameter @{ EntraIdTenantId = $null; OAuthScope = 'scope' } -AuthenticationType 'Browser' -SessionKey 'key'
+            $Result.ContainsKey('EntraIdTenantId') | Should -BeFalse
+            $Result.OAuthScope | Should -Be 'scope'
+        }
+    }
+
+    It 'Does not pass on a parameter it does not know' {
+        InModuleScope 'OmadaSql.PS' {
+            (New-OmadaSqlRequestParameter -BoundParameter @{ Uri = 'https://elsewhere.example.com' } -AuthenticationType 'Browser' -SessionKey 'key').ContainsKey('Uri') | Should -BeFalse
+        }
+    }
+
     It 'Drops an empty credential' {
         InModuleScope 'OmadaSql.PS' {
             $Result = New-OmadaSqlRequestParameter -BoundParameter @{ Credential = [System.Management.Automation.PSCredential]::Empty } -AuthenticationType 'Browser' -SessionKey 'key'
@@ -89,6 +103,51 @@ Describe 'New-OmadaSqlRequestParameter' -Tag 'Unit' {
         InModuleScope 'OmadaSql.PS' -Parameters @{ Additional = $Additional } {
             param($Additional)
             { New-OmadaSqlRequestParameter -BoundParameter @{} -AuthenticationType 'Browser' -SessionKey 'key' -AdditionalParameter $Additional } | Should -Throw -ErrorId 'OmadaSql.InvalidArgument'
+        }
+    }
+}
+
+Describe 'Assert-OmadaSqlAuthenticationParameter' -Tag 'Unit' {
+    It 'Accepts <Case>' -ForEach @(
+        @{ Case = 'OAuth with a client id and one certificate source'; Type = 'OAuth'; Parameter = @{ ClientId = 'client'; OAuthCertificate = 'cert' } }
+        @{ Case = 'OAuth with a credential'; Type = 'OAuth'; Parameter = @{ Credential = 'credential' } }
+        @{ Case = 'Browser without anything'; Type = 'Browser'; Parameter = @{} }
+        @{ Case = 'Integrated without anything'; Type = 'Integrated'; Parameter = @{} }
+        @{ Case = 'Basic with a credential'; Type = 'Basic'; Parameter = @{ Credential = 'credential' } }
+    ) {
+        InModuleScope 'OmadaSql.PS' -Parameters @{ Type = $Type; Parameter = $Parameter } {
+            param($Type, $Parameter)
+            { Assert-OmadaSqlAuthenticationParameter -Parameter $Parameter -AuthenticationType $Type } | Should -Not -Throw
+        }
+    }
+
+    It 'Accepts OAuth with a certificate and a credential, as long as there is a client id' {
+        InModuleScope 'OmadaSql.PS' {
+            { Assert-OmadaSqlAuthenticationParameter -Parameter @{ ClientId = 'client'; OAuthCertificateThumbprint = 'AB12'; Credential = 'credential' } -AuthenticationType 'OAuth' } | Should -Not -Throw
+        }
+    }
+}
+
+Describe 'Add-OmadaSqlAdditionalParameter' -Tag 'Unit' {
+    BeforeEach {
+        InModuleScope 'OmadaSql.PS' { $Script:OmadaSqlRestMethodParameterCache = $null }
+    }
+
+    It 'Adds every allowed entry and leaves the existing ones alone' {
+        InModuleScope 'OmadaSql.PS' {
+            $Parameter = @{ AuthenticationType = 'OAuth' }
+            Add-OmadaSqlAdditionalParameter -Parameter $Parameter -AdditionalParameter @{ MaximumRetryCount = 2; UserName = 'admin' } -ReservedName @('Uri')
+            $Parameter.MaximumRetryCount | Should -Be 2
+            $Parameter.UserName | Should -Be 'admin'
+            $Parameter.AuthenticationType | Should -Be 'OAuth'
+        }
+    }
+
+    It 'Adds nothing for an empty table' {
+        InModuleScope 'OmadaSql.PS' {
+            $Parameter = @{ AuthenticationType = 'OAuth' }
+            Add-OmadaSqlAdditionalParameter -Parameter $Parameter -AdditionalParameter @{} -ReservedName @('Uri')
+            $Parameter.Count | Should -Be 1
         }
     }
 }

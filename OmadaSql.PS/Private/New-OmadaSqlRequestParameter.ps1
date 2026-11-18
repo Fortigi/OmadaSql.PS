@@ -32,7 +32,6 @@ function New-OmadaSqlRequestParameter {
         'ClientId', 'OAuthCertificateThumbprint', 'OAuthCertificatePath', 'OAuthCertificatePassword', 'OAuthCertificate',
         'Credential', 'EntraIdTenantId', 'EntraApplicationIdUri', 'OAuthScope', 'OAuthUri'
     )
-    $ReservedName = @('Uri', 'Method', 'Body', 'ContentType', 'AuthenticationType', 'SessionKey', 'ErrorAction', 'ForceAuthentication', 'NoInteractiveAuthentication') + $PassThroughName
 
     $Parameter = @{
         AuthenticationType = $AuthenticationType
@@ -47,30 +46,82 @@ function New-OmadaSqlRequestParameter {
         $Parameter.Remove('Credential')
     }
 
-    if ($AuthenticationType -eq 'OAuth') {
-        $CertificateParameter = @(@('OAuthCertificateThumbprint', 'OAuthCertificatePath', 'OAuthCertificate') | Where-Object { $Parameter.ContainsKey($_) })
-        if ($CertificateParameter.Count -gt 1) {
-            throw (New-OmadaSqlErrorRecord -Kind 'InvalidArgument' -Message ("Use only one of -OAuthCertificateThumbprint, -OAuthCertificatePath and -OAuthCertificate (got {0})." -f ($CertificateParameter -join ', ')))
-        }
-        if ($CertificateParameter.Count -eq 1 -and -not $Parameter.ContainsKey('ClientId')) {
-            throw (New-OmadaSqlErrorRecord -Kind 'InvalidArgument' -Message 'A client certificate needs -ClientId: with a certificate the client id is never taken from -Credential.')
-        }
-        if ($CertificateParameter.Count -eq 0 -and -not $Parameter.ContainsKey('Credential')) {
-            throw (New-OmadaSqlErrorRecord -Kind 'InvalidArgument' -Message '-AuthenticationType OAuth needs a client certificate (-ClientId with -OAuthCertificateThumbprint, -OAuthCertificatePath or -OAuthCertificate) or a client id and secret in -Credential.')
-        }
-    }
-    elseif ($AuthenticationType -in @('Windows', 'Basic') -and -not $Parameter.ContainsKey('Credential')) {
-        throw (New-OmadaSqlErrorRecord -Kind 'InvalidArgument' -Message ("-AuthenticationType {0} needs -Credential." -f $AuthenticationType))
-    }
+    Assert-OmadaSqlAuthenticationParameter -Parameter $Parameter -AuthenticationType $AuthenticationType
 
     if ($NoInteractiveAuthentication) {
-        if (Test-OmadaSqlRestMethodParameter -Name 'NoInteractiveAuthentication') {
-            $Parameter.NoInteractiveAuthentication = $true
-        }
-        else {
+        if (-not (Test-OmadaSqlRestMethodParameter -Name 'NoInteractiveAuthentication')) {
             throw (New-OmadaSqlErrorRecord -Kind 'InvalidArgument' -Message 'The installed OmadaWeb.PS does not support -NoInteractiveAuthentication. Update OmadaWeb.PS (Update-Module OmadaWeb.PS).')
         }
+        $Parameter.NoInteractiveAuthentication = $true
     }
+
+    Add-OmadaSqlAdditionalParameter -Parameter $Parameter -AdditionalParameter $AdditionalParameter -ReservedName ($PassThroughName + @('Uri', 'Method', 'Body', 'ContentType', 'AuthenticationType', 'SessionKey', 'ErrorAction', 'ForceAuthentication', 'NoInteractiveAuthentication'))
+
+    return $Parameter
+}
+
+function Assert-OmadaSqlAuthenticationParameter {
+    <#
+    .SYNOPSIS
+    Throws OmadaSql.InvalidArgument for an authentication parameter combination that cannot work.
+
+    .DESCRIPTION
+    OAuth needs either exactly one client certificate source together with -ClientId, or a client id
+    and secret in -Credential. Windows and Basic need -Credential. Checked before any request, so an
+    unattended run fails with the cause instead of an identity provider error.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Parameter,
+
+        [Parameter(Mandatory = $true)]
+        [string]$AuthenticationType
+    )
+
+    if ($AuthenticationType -in @('Windows', 'Basic')) {
+        if (-not $Parameter.ContainsKey('Credential')) {
+            throw (New-OmadaSqlErrorRecord -Kind 'InvalidArgument' -Message ("-AuthenticationType {0} needs -Credential." -f $AuthenticationType))
+        }
+        return
+    }
+    if ($AuthenticationType -ne 'OAuth') {
+        return
+    }
+
+    $CertificateParameter = @(@('OAuthCertificateThumbprint', 'OAuthCertificatePath', 'OAuthCertificate') | Where-Object { $Parameter.ContainsKey($_) })
+    if ($CertificateParameter.Count -gt 1) {
+        throw (New-OmadaSqlErrorRecord -Kind 'InvalidArgument' -Message ("Use only one of -OAuthCertificateThumbprint, -OAuthCertificatePath and -OAuthCertificate (got {0})." -f ($CertificateParameter -join ', ')))
+    }
+    if ($CertificateParameter.Count -eq 1 -and -not $Parameter.ContainsKey('ClientId')) {
+        throw (New-OmadaSqlErrorRecord -Kind 'InvalidArgument' -Message 'A client certificate needs -ClientId: with a certificate the client id is never taken from -Credential.')
+    }
+    if ($CertificateParameter.Count -eq 0 -and -not $Parameter.ContainsKey('Credential')) {
+        throw (New-OmadaSqlErrorRecord -Kind 'InvalidArgument' -Message '-AuthenticationType OAuth needs a client certificate (-ClientId with -OAuthCertificateThumbprint, -OAuthCertificatePath or -OAuthCertificate) or a client id and secret in -Credential.')
+    }
+}
+
+function Add-OmadaSqlAdditionalParameter {
+    <#
+    .SYNOPSIS
+    Adds the -AdditionalParameter entries of Connect-OmadaSql to the request parameters.
+
+    .DESCRIPTION
+    Each name must be a parameter of the installed Invoke-OmadaRestMethod, and may not be one the
+    module sets itself: those would silently override the connection or the request.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Parameter,
+
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [hashtable]$AdditionalParameter,
+
+        [Parameter(Mandatory = $true)]
+        [string[]]$ReservedName
+    )
 
     foreach ($Name in $AdditionalParameter.Keys) {
         if ($Name -in $ReservedName) {
@@ -81,6 +132,4 @@ function New-OmadaSqlRequestParameter {
         }
         $Parameter[$Name] = $AdditionalParameter[$Name]
     }
-
-    return $Parameter
 }

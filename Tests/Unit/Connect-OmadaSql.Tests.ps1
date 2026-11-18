@@ -63,6 +63,31 @@ Describe 'Connect-OmadaSql' -Tag 'Unit' {
         ($Connection | ConvertTo-Json) | Should -Not -BeLike '*super-secret*'
     }
 
+    It 'Reports no client id for a credential used with another authentication type' {
+        Mock Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' { $null }
+        $Credential = [System.Management.Automation.PSCredential]::new('DOMAIN\user', (ConvertTo-SecureString -String 'secret' -AsPlainText -Force))
+
+        (Connect-OmadaSql -Url 'https://omada.contoso.com' -AuthenticationType Windows -Credential $Credential -PassThru).ClientId | Should -BeNullOrEmpty
+    }
+
+    It 'Does not count an unverified connection as having read from the tenant' {
+        Mock Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' { $null }
+        $Connection = Connect-OmadaSql -Url 'https://tenant.omada.cloud' -SkipConnectionTest -PassThru
+        InModuleScope 'OmadaSql.PS' -Parameters @{ Id = $Connection.Id } {
+            param($Id)
+            $Script:OmadaSqlConnectionStore[$Id].ReadSucceeded | Should -BeFalse
+        }
+    }
+
+    It 'Counts the verification read, so a later refused write is a missing permission' {
+        Mock Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' { $null }
+        $Connection = Connect-OmadaSql -Url 'https://tenant.omada.cloud' -PassThru
+        InModuleScope 'OmadaSql.PS' -Parameters @{ Id = $Connection.Id } {
+            param($Id)
+            $Script:OmadaSqlConnectionStore[$Id].ReadSucceeded | Should -BeTrue
+        }
+    }
+
     It 'Skips the verification request with -SkipConnectionTest' {
         Mock Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' { $null }
 

@@ -82,11 +82,77 @@ Describe 'Resolve-OmadaSqlRequestError' -Tag 'Unit' {
         }
     }
 
+    It 'Uses the exception message when ErrorDetails is empty' {
+        $ErrorRecord = New-OmadaSqlTestHttpError -StatusCode 400 -Message 'exception text'
+        $ErrorRecord.ErrorDetails = [System.Management.Automation.ErrorDetails]::new(' ')
+        InModuleScope 'OmadaSql.PS' -Parameters @{ ErrorRecord = $ErrorRecord; Uri = $Script:ODataUri } {
+            param($ErrorRecord, $Uri)
+            (Resolve-OmadaSqlRequestError -ErrorRecord $ErrorRecord -Method GET -Uri $Uri).Message | Should -BeLike '*exception text*'
+        }
+    }
+
+    It 'Classifies an error without any status code as RequestFailed' {
+        $ErrorRecord = [System.Management.Automation.ErrorRecord]::new([System.Exception]::new('connection reset'), 'Test', [System.Management.Automation.ErrorCategory]::ConnectionError, $null)
+        InModuleScope 'OmadaSql.PS' -Parameters @{ ErrorRecord = $ErrorRecord; Uri = $Script:ODataUri } {
+            param($ErrorRecord, $Uri)
+            $Result = Resolve-OmadaSqlRequestError -ErrorRecord $ErrorRecord -Method GET -Uri $Uri
+            $Result.Kind | Should -Be 'RequestFailed'
+            $Result.Message | Should -BeLike '*connection reset*'
+        }
+    }
+
+    It 'Does not treat a GET on OData as a write' {
+        $ErrorRecord = New-OmadaSqlTestHttpError -StatusCode 401
+        InModuleScope 'OmadaSql.PS' -Parameters @{ ErrorRecord = $ErrorRecord; Uri = $Script:ODataUri } {
+            param($ErrorRecord, $Uri)
+            (Resolve-OmadaSqlRequestError -ErrorRecord $ErrorRecord -Method get -Uri $Uri -ReadSucceeded $true).Kind | Should -Be 'SessionExpired'
+        }
+    }
+
     It 'Puts the response body (ErrorDetails) in the message when there is one' {
         $ErrorRecord = New-OmadaSqlTestHttpError -StatusCode 400 -Detail 'The query pipeline failed'
         InModuleScope 'OmadaSql.PS' -Parameters @{ ErrorRecord = $ErrorRecord; Uri = $Script:ODataUri } {
             param($ErrorRecord, $Uri)
             (Resolve-OmadaSqlRequestError -ErrorRecord $ErrorRecord -Method GET -Uri $Uri).Message | Should -BeLike '*The query pipeline failed*'
+        }
+    }
+}
+
+Describe 'Get-OmadaSqlRequestErrorKind' -Tag 'Unit' {
+    It 'Returns <Expected> for <Case>' -ForEach @(
+        @{ Case = 'the missing endpoint, whatever the status'; Parameter = @{ StatusCode = 401; Detail = "Resource not found for the segment 'C_P_SQLTROUBLESHOOTING'"; Unauthorized = $true; IsODataWrite = $true; ReadSucceeded = $true }; Expected = 'EndpointNotEnabled' }
+        @{ Case = 'a refused write after a read'; Parameter = @{ StatusCode = 401; Detail = ''; Unauthorized = $true; IsODataWrite = $true; ReadSucceeded = $true }; Expected = 'MissingPermission' }
+        @{ Case = 'a refused write before any read'; Parameter = @{ StatusCode = 401; Detail = ''; Unauthorized = $true; IsODataWrite = $true; ReadSucceeded = $false }; Expected = 'SessionExpired' }
+        @{ Case = 'a refused read after a read'; Parameter = @{ StatusCode = 401; Detail = ''; Unauthorized = $true; IsODataWrite = $false; ReadSucceeded = $true }; Expected = 'SessionExpired' }
+        @{ Case = 'HTTP 499'; Parameter = @{ StatusCode = 499; Detail = ''; Unauthorized = $false; IsODataWrite = $false; ReadSucceeded = $false }; Expected = 'RequestFailed' }
+        @{ Case = 'HTTP 500'; Parameter = @{ StatusCode = 500; Detail = ''; Unauthorized = $false; IsODataWrite = $false; ReadSucceeded = $false }; Expected = 'ServerError' }
+        @{ Case = 'no status code'; Parameter = @{ StatusCode = $null; Detail = ''; Unauthorized = $false; IsODataWrite = $false; ReadSucceeded = $false }; Expected = 'RequestFailed' }
+    ) {
+        InModuleScope 'OmadaSql.PS' -Parameters @{ Parameter = $Parameter; Expected = $Expected } {
+            param($Parameter, $Expected)
+            Get-OmadaSqlRequestErrorKind @Parameter | Should -Be $Expected
+        }
+    }
+}
+
+Describe 'Get-OmadaSqlRequestErrorMessage' -Tag 'Unit' {
+    It 'Names the <Permission> permission for a refused <Method>' -ForEach @(
+        @{ Method = 'POST'; Permission = 'Create' }
+        @{ Method = 'PUT'; Permission = 'Update' }
+        @{ Method = 'PATCH'; Permission = 'Update' }
+        @{ Method = 'DELETE'; Permission = 'Delete' }
+    ) {
+        InModuleScope 'OmadaSql.PS' -Parameters @{ Method = $Method; Permission = $Permission } {
+            param($Method, $Permission)
+            Get-OmadaSqlRequestErrorMessage -Kind 'MissingPermission' -Method $Method -Uri 'https://tenant.omada.cloud/odata/x' -StatusCode 401 -Detail '' | Should -BeLike "*'$Permission' permission*"
+        }
+    }
+
+    It 'Includes the status code and the detail for a server error' {
+        InModuleScope 'OmadaSql.PS' {
+            $Message = Get-OmadaSqlRequestErrorMessage -Kind 'ServerError' -Method 'POST' -Uri 'https://tenant.omada.cloud/webservice/x' -StatusCode 502 -Detail 'gateway'
+            $Message | Should -BeLike '*HTTP 502*'
+            $Message | Should -BeLike '*gateway*'
         }
     }
 }
