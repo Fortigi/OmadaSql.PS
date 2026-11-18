@@ -3,7 +3,7 @@ param(
 )
 
 BeforeAll {
-    Get-Module OmadaSql.PS | Remove-Module -Force -ErrorAction SilentlyContinue
+    Get-Module -Name OmadaSql.PS -All | Remove-Module -Force -ErrorAction SilentlyContinue
     Import-Module $ModulePath -Force -ErrorAction Stop
 }
 

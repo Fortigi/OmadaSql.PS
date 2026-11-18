@@ -371,6 +371,10 @@ Task Test -depends ImportModule {
     }
     finally {
         $Env:OMADASQLPS_STRICTMODE = $PreviousStrictMode
+        # Every copy the test files imported, in whatever scope, is removed: the mutation gate runs
+        # the tests again in this session, and Pester's InModuleScope refuses to run while two
+        # modules of the same name are loaded.
+        Get-Module -Name $ModuleName -All | Remove-Module -Force -ErrorAction SilentlyContinue
     }
 
     if ($Result.FailedCount -gt 0) {

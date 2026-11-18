@@ -4,7 +4,7 @@ param(
 
 BeforeAll {
     . (Join-Path -Path $PSScriptRoot -ChildPath 'Helpers\OmadaSqlTestHelper.ps1')
-    Get-Module OmadaSql.PS | Remove-Module -Force -ErrorAction SilentlyContinue
+    Get-Module -Name OmadaSql.PS -All | Remove-Module -Force -ErrorAction SilentlyContinue
     Import-Module $ModulePath -Force -ErrorAction Stop
     $Script:ODataUri = 'https://tenant.omada.cloud/odata/dataobjects/C_P_SQLTROUBLESHOOTING'
 }

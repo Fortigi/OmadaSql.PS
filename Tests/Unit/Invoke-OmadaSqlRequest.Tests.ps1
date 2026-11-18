@@ -5,7 +5,7 @@ param(
 BeforeAll {
     . (Join-Path -Path $PSScriptRoot -ChildPath 'Helpers\OmadaSqlTestHelper.ps1')
     Import-OmadaWebStub
-    Get-Module OmadaSql.PS | Remove-Module -Force -ErrorAction SilentlyContinue
+    Get-Module -Name OmadaSql.PS -All | Remove-Module -Force -ErrorAction SilentlyContinue
     Import-Module $ModulePath -Force -ErrorAction Stop
 }
 
@@ -85,7 +85,7 @@ Describe 'Invoke-OmadaSqlRequest' -Tag 'Unit' {
         }
     }
 
-    It 'Turns a failure into an OmadaSql.<Kind> error that keeps the original' {
+    It 'Turns a failure into an OmadaSql.classified error that keeps the original' {
         Mock Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' { throw (New-OmadaSqlTestHttpError -StatusCode 404) }
         InModuleScope 'OmadaSql.PS' -Parameters @{ Context = $Script:Context } {
             param($Context)

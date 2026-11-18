@@ -38,7 +38,7 @@ namespace OmadaSqlPSTests
 }
 
 function Import-OmadaWebStub {
-    Get-Module -Name 'OmadaWeb.PS' | Remove-Module -Force -ErrorAction SilentlyContinue
+    Get-Module -Name 'OmadaWeb.PS' -All | Remove-Module -Force -ErrorAction SilentlyContinue
     $Stub = New-Module -Name 'OmadaWeb.PS' -ScriptBlock {
         function Invoke-OmadaRestMethod {
             [CmdletBinding()]
