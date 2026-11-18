@@ -177,3 +177,15 @@ Describe 'Get-OmadaSqlErrorDetail' -Tag 'Unit' {
         }
     }
 }
+
+Describe 'Get-OmadaSqlErrorDetail escapes' -Tag 'Unit' {
+    It 'Decodes the \u escapes PowerShell 7 writes into a re-serialized JSON error body' {
+        $Body = "{`n  ""error"": {`n    ""message"": ""Resource not found for the segment \u0027C_P_SQLTROUBLESHOOTING\u0027.""`n  }`n}"
+        $ErrorRecord = New-OmadaSqlTestHttpError -StatusCode 404 -Detail $Body
+        InModuleScope 'OmadaSql.PS' -Parameters @{ ErrorRecord = $ErrorRecord } {
+            param($ErrorRecord)
+            Get-OmadaSqlErrorDetail -ErrorRecord $ErrorRecord | Should -BeLike "*segment 'C_P_SQLTROUBLESHOOTING'.*"
+            (Resolve-OmadaSqlRequestError -ErrorRecord $ErrorRecord -Method GET -Uri 'https://tenant.omada.cloud/odata/dataobjects/C_P_SQLTROUBLESHOOTING').Kind | Should -Be 'EndpointNotEnabled'
+        }
+    }
+}

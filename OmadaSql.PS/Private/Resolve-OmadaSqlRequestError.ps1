@@ -62,6 +62,10 @@ function Get-OmadaSqlErrorDetail {
     in the exception or an inner exception. The response body comes first, followed by every distinct
     exception message in the chain, so a classification that looks for a phrase finds it wherever it
     ended up.
+
+    PowerShell 7 re-serializes a JSON error body before it lands in ErrorDetails.Message, escaping
+    characters such as the apostrophe as \u0027 (found by the integration tests). Those escapes are
+    decoded, so the text reads, and matches, the same on both editions.
     #>
     [CmdletBinding()]
     [OutputType([string])]
@@ -83,7 +87,7 @@ function Get-OmadaSqlErrorDetail {
         }
         $Exception = $Exception.InnerException
     }
-    return ($Text -join ' | ')
+    return [regex]::Replace(($Text -join ' | '), '\\u([0-9a-fA-F]{4})', { param($Match) [string][char][Convert]::ToInt32($Match.Groups[1].Value, 16) })
 }
 
 function Get-OmadaSqlRequestErrorKind {
@@ -107,7 +111,9 @@ function Get-OmadaSqlRequestErrorKind {
         [bool]$ReadSucceeded
     )
 
-    if ($Detail -like "*Resource not found for the segment 'C_P_SQLTROUBLESHOOTING'*") {
+    # Matched on the two parts rather than on the exact sentence: the quoting around the segment
+    # name differs between how Omada sends it and how each PowerShell edition reports it.
+    if ($Detail -like '*Resource not found for the segment*C_P_SQLTROUBLESHOOTING*') {
         return 'EndpointNotEnabled'
     }
     if ($Unauthorized) {
