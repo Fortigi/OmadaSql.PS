@@ -17,7 +17,7 @@ tenant or documentation before it is relied on.
 | SQL parser (ScriptDom) | **Bundled** in the package, pinned by version and SHA-256 in a dependency lock, with a Dependabot `nuget` entry. No runtime download. Requires the `net462` build for 5.1 and the `net8.0` build for 7 (**Assumption**: both are in the 180.x package). |
 | Saved queries | Executed read-only: the saved object is never written, unlike the GUI, which saves before it executes. |
 | Temporary query objects | A bounded slot pool `TMP_<InstanceGuid>_<n>` per user profile (`InstanceGuid` persisted in `%LOCALAPPDATA%\OmadaSql.PS\settings.json`), each slot leased with a named mutex, soft-deleted after use and restored (`UndeleteDataObject`) on reuse. `MaxTempQuerySlots` (default 4) caps the number of objects a profile can ever leave on the tenant. |
-| Temporary object cleanup | `Clear-OmadaSqlTempQuery`: finds `TMP_*` objects (`DeletedStatus=Both`), by default only those created by the signed-in identity (`-AllUsers` widens), never a leased slot, `-WhatIf`/`-Confirm`. Purging already soft-deleted objects only if Omada exposes a purge API (**Assumption**, see open items). |
+| Temporary object cleanup | `Clear-OmadaSqlTempQuery`: lists `TMP_*` objects, by default only those created by the signed-in user (`-AllUsers` widens), never a leased slot. Live orphans are soft-deleted; with `-Purge` soft-deleted ones are purged with `PurgeDataObject` (irreversible: `ConfirmImpact = 'High'`, never the default). Creator filtering runs through SQL Troubleshooting (`tblDataObject.CreatedBy`), because OData does not expose `CreatedBy`. See "Deleted objects" below. |
 | Object overview | `Get-OmadaSqlQuery -Detailed`: all OData properties, the resolved data connection, the owner (created by / changed by) and the history in one object. |
 | Validation | On by default, `-SkipValidation` to skip. A blocking diagnostic is a terminating error, never a prompt. Severity per rule can be overridden. |
 | Live tenant tests | None for now (no test tenant). Integration tests use a local `HttpListener` mock of the Omada endpoints. |
@@ -33,6 +33,7 @@ tenant or documentation before it is relied on.
 | Create / update | `POST` entity / `PUT …(<DoId>)` with `NAME`, `C_QUERY`, `C_SQLTROUBLESHOOTING_DATACONNECTION = @{ Id = <DoId> }` |
 | Execute | `POST {BaseUrl}/webservice/jQGridPopulationWebService.asmx/GetPagingData`, `dataType = SqlDataProducer`, `dataTypeArgs.targetId = <DoId>`, `rows = 100000` |
 | Delete (soft) | `DELETE …(<DoId>)` |
+| Purge (hard delete) | `POST {BaseUrl}/WebService/DataObjectWebService.asmx/PurgeDataObject` body `{"id": <DoId>}` (from the deleted-objects brief, not yet exercised by any reference code) |
 | Data connections | `GetPagingData` `Views` search "SQL Troubleshooting", then `DataObjects` of that view, then `GET dataobjdlg.aspx?DOID=<c-13>` and parse the `<option>` list |
 | Schema | `POST {BaseUrl}/webservice/SyntaxHighlighting.asmx/GetSqlSchema` body `{ connectionId }` |
 | History | `GetPagingData` `dataType = DataObjectHistory`, `dataTypeArgs = { dataObjectId, propertyId = 0, userId = 0 }`, `sidx = when`, `sord = desc` |
@@ -76,14 +77,33 @@ Each phase is one pull request, test first.
 5. **Schema and export** - schema model and cache, export format registry.
 6. **Integration and release** - `HttpListener` mock of the Omada endpoints, README, first nightly.
 
+## Deleted objects
+
+Source: the deleted-objects brief (bulk undelete / purge). Items marked (verify) in it are not
+relied on until a test confirms them.
+
+| Topic | Rule |
+|---|---|
+| Listing | OData `deletedStatus=Deleted` (custom query parameter, values `Deleted`, `NotDeleted`, `Both`, **case-sensitive**; an invalid value silently falls back to `NotDeleted`). Every listing validates that each returned object has `Deleted = true` and throws otherwise. Paging with `$top`/`$skip` until all pages are read (`ODataPageSizeLimit`). |
+| Creator | `CreatedBy`/`DeletedBy` are not in OData. Read from `tblDataObject` (database `OISES`) through SQL Troubleshooting: the module runs its own read-only query for this. |
+| Undelete | `UndeleteDataObject` `{"id": <int>}`, one object per call; System Administrators or Data Administrators only. Clears `DeletedBy`/`DeleteTime`, so those are captured first. |
+| Purge | `PurgeDataObject` `{"id": <int>}`, one object per call; only for delete-marked objects; System, Operation or Data Administrator auth role; also purges child objects and process instances that target the object. |
+| Delete (bulk, test setup) | `DeleteDataObjects` `{"ids": [<int>, ...]}` |
+| Permissions | A user without those roles can run the slot pool (soft delete and undelete of its own `TMP_` object is what OmadaSqlTroubleshooter does today) but not purge. A refused purge is reported with the required role, not as a generic 401. (verify which roles the undelete of a `C_P_SQLTROUBLESHOOTING` object really needs) |
+| SQL errors | Any SQL error in SQL Troubleshooting returns a generic HTTP 500 (`The query pipeline failed at step 'ExecuteQuery'`); `DECLARE`, temp tables, dynamic SQL and `USE` are not available. |
+
+Inconsistency to resolve: the brief says the OData type segment is the system name with only the
+first letter upper case (`Identity`, `Resource`), while OmadaSqlTroubleshooter successfully uses
+`C_P_SQLTROUBLESHOOTING`. Both are kept as observed; the module uses the segment the GUI uses.
+
 ## Open items (to verify, not assume)
 
 | Item | How to settle it |
 |---|---|
-| Whether Omada can purge (hard-delete) soft-deleted data objects through an API | Omada documentation or a tenant test before `Clear-OmadaSqlTempQuery -Purge` is built |
-| Which OData property identifies the creator of an object (for "only my objects") | Inspect a `C_P_SQLTROUBLESHOOTING` object on a tenant; fall back to the view columns the GUI uses |
+| How to resolve the signed-in user's object ID (to compare with `CreatedBy`) | Tenant test; candidates: `actusersettingsdlg.aspx` (what the GUI scrapes) or a lookup on the user name in `tblDataObject` |
+| Whether a non-admin account can list deleted objects via OData (`deletedStatus=Deleted`) | Tenant test |
 | Whether `SqlDataProducer` honours `page` > 1 for results over 100 000 rows | Tenant test; until then an explicit error above the limit |
-| The response Omada returns for a failing SQL statement | Tenant test; drives error classification |
+| The response Omada returns for a failing SQL statement | Per the brief: generic HTTP 500, `The query pipeline failed at step 'ExecuteQuery'`. Confirm the body shape with a tenant test |
 | ScriptDom 180.x containing a `net462` build for Windows PowerShell 5.1 | Inspect the package in Phase 3 |
 
 ## One-time repository settings (maintainer)
