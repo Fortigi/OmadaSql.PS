@@ -41,7 +41,10 @@ Describe 'Get-OmadaSqlQuery' -Tag 'Unit' {
     }
 
     It 'Fails with the OmadaSql error of the request' {
-        Mock Get-OmadaSqlQueryData -ModuleName 'OmadaSql.PS' { throw (New-OmadaSqlErrorRecord -Kind 'NotFound' -Message 'gone') }
+        # Built here: a mock body runs in the test's scope, where the module's private functions are not visible.
+        Mock Get-OmadaSqlQueryData -ModuleName 'OmadaSql.PS' {
+            throw ([System.Management.Automation.ErrorRecord]::new([System.InvalidOperationException]::new('gone'), 'OmadaSql.NotFound', [System.Management.Automation.ErrorCategory]::ObjectNotFound, $null))
+        }
         { Get-OmadaSqlQuery -Id 404 } | Should -Throw -ErrorId 'OmadaSql.NotFound,Get-OmadaSqlQuery'
     }
 }
