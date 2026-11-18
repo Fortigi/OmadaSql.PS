@@ -62,6 +62,7 @@ function Import-OmadaWebStub {
                 [switch]$NoInteractiveAuthentication,
                 [switch]$ForceAuthentication,
                 [int]$MaximumRetryCount,
+                [switch]$Paged,
                 [string]$UserName
             )
             throw 'The OmadaWeb.PS test stub was called without a mock. Mock Invoke-OmadaRestMethod -ModuleName OmadaSql.PS in the test.'
@@ -92,4 +93,30 @@ function New-OmadaSqlTestHttpError {
 function New-OmadaSqlTestSessionExpiredError {
     $Exception = [System.Security.Authentication.AuthenticationException]::new('There is no valid Omada session.')
     return [System.Management.Automation.ErrorRecord]::new($Exception, 'OmadaSessionExpired,Invoke-OmadaRestMethod', [System.Management.Automation.ErrorCategory]::AuthenticationError, $null)
+}
+
+function New-OmadaSqlTestODataQuery {
+    # A C_P_SQLTROUBLESHOOTING object as OData returns it.
+    param(
+        [long]$Id = 101,
+        [string]$Name = 'Daily export',
+        [string]$Query = 'SELECT [Id] = 1',
+        [long]$DataConnectionId = 1001,
+        [string]$DataConnectionName = 'OISES',
+        [bool]$Deleted = $false
+    )
+    [pscustomobject]@{
+        Id                                  = $Id
+        NAME                                = $Name
+        DisplayName                         = $Name
+        C_QUERY                             = $Query
+        C_SQLTROUBLESHOOTING_DATACONNECTION = [pscustomobject]@{ Id = $DataConnectionId; DisplayName = $DataConnectionName }
+        Deleted                             = $Deleted
+    }
+}
+
+function Initialize-OmadaSqlTestConnection {
+    # A current connection without any request: the stub answers nothing, -SkipConnectionTest sends nothing.
+    Disconnect-OmadaSql -All
+    Connect-OmadaSql -Url 'https://tenant.omada.cloud' -AuthenticationType OAuth -ClientId 'client' -OAuthCertificateThumbprint 'AB12' -SkipConnectionTest -PassThru
 }

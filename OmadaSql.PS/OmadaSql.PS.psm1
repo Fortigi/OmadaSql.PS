@@ -21,6 +21,8 @@ $Script:OmadaSqlConnectionStore = @{}
 $Script:OmadaSqlCurrentConnectionId = $null
 # Creation order of the connections, so Get-OmadaSqlConnection -All lists them in a stable order.
 $Script:OmadaSqlConnectionSequence = 0
+# The OData entity set of SQL Troubleshooting objects, relative to the tenant base URL.
+$Script:OmadaSqlEntityPath = 'odata/dataobjects/C_P_SQLTROUBLESHOOTING'
 # Parameter names of the loaded Invoke-OmadaRestMethod, resolved once (see Test-OmadaSqlRestMethodParameter).
 $Script:OmadaSqlRestMethodParameterCache = $null
 

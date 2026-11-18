@@ -16,7 +16,7 @@ All sign-in and every request go through [OmadaWeb.PS](https://github.com/Fortig
 every authentication type it supports is available, including unattended OAuth with a client
 certificate.
 
-> **Status: in development.** The connection commands are in place; the rest is being built phase
+> **Status: in development.** The connection, data connection and object management commands are in place; the rest is being built phase
 > by phase as described in [docs/PLAN.md](docs/PLAN.md). Nothing is published to the PowerShell
 > Gallery yet.
 
@@ -29,6 +29,13 @@ certificate.
 | `Connect-OmadaSql` | Connects to an Omada Identity Cloud tenant for SQL Troubleshooting commands. |
 | `Disconnect-OmadaSql` | Removes a connection made with Connect-OmadaSql. |
 | `Get-OmadaSqlConnection` | Returns the current connection, or every connection. |
+| `Get-OmadaSqlDataConnection` | Lists the data connections SQL Troubleshooting queries can run against. |
+| `Get-OmadaSqlQuery` | Gets SQL Troubleshooting objects from Omada. |
+| `Get-OmadaSqlQueryHistory` | Gets the full change history of a SQL Troubleshooting object. |
+| `New-OmadaSqlQuery` | Creates a SQL Troubleshooting object in Omada. |
+| `Remove-OmadaSqlQuery` | Deletes a SQL Troubleshooting object in Omada. |
+| `Restore-OmadaSqlQuery` | Restores a deleted SQL Troubleshooting object. |
+| `Set-OmadaSqlQuery` | Changes the name, SQL text or data connection of a SQL Troubleshooting object. |
 
 _Generated from the comment-based help by `Build/Update-ReadmeHelp.ps1`. Run `Get-Help <Command> -Full` for syntax, parameters and examples._
 
@@ -38,12 +45,9 @@ _Generated from the comment-based help by `Build/Update-ReadmeHelp.ps1`. Run `Ge
 
 | Area | Commands |
 |---|---|
-| Data connections | `Get-OmadaSqlDataConnection` |
 | Query execution | `Invoke-OmadaSqlQuery` (existing SQL Troubleshooting objects, or ad-hoc SQL through a temporary query object; database-name prefixes and `USE` resolved to data connections) |
 | Validation | `Test-OmadaSqlQuery` (T-SQL syntax, Omada compatibility rules, schema warnings); `-SkipValidation` on `Invoke-OmadaSqlQuery` |
 | Schema | `Get-OmadaSqlSchema` |
-| Object management (OData) | `Get-OmadaSqlQuery`, `New-OmadaSqlQuery`, `Set-OmadaSqlQuery`, `Remove-OmadaSqlQuery`, `Restore-OmadaSqlQuery` |
-| History and overview | `Get-OmadaSqlQueryHistory`, `Get-OmadaSqlQuery -Detailed` |
 | Temporary objects | `Get-OmadaSqlTempQuery`, `Clear-OmadaSqlTempQuery` |
 | Export | `Export-OmadaSqlResult`, `Register-OmadaSqlExportFormat`, `Get-OmadaSqlExportFormat` |
 

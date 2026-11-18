@@ -15,6 +15,9 @@ function Invoke-OmadaSqlRequest {
     PowerShell 5.1 encodes a string body as ISO-8859-1 whatever charset the content type names, which
     turns query text outside Latin-1 into question marks (found by the integration tests).
 
+    -Paged asks OmadaWeb.PS to follow @odata.nextLink until every page of an OData list is read;
+    Omada caps a page at the tenant's ODataPageSizeLimit. It only applies to GET.
+
     The request body and the response are never written to the Verbose stream: both can hold query
     text and personal data. Only the method, the URI and the outcome are.
     #>
@@ -31,7 +34,9 @@ function Invoke-OmadaSqlRequest {
         [string]$Path,
 
         [AllowNull()]
-        [object]$Body
+        [object]$Body,
+
+        [switch]$Paged
     )
 
     $Uri = "{0}/{1}" -f $Context.Connection.BaseUrl, $Path.TrimStart('/')
@@ -47,6 +52,10 @@ function Invoke-OmadaSqlRequest {
             $Json = ConvertTo-Json -InputObject $Body -Depth 20 -Compress
         }
         $Parameters.Body = [System.Text.Encoding]::UTF8.GetBytes([string]$Json)
+    }
+
+    if ($Paged -and $Method -eq 'GET' -and (Test-OmadaSqlRestMethodParameter -Name 'Paged')) {
+        $Parameters.Paged = $true
     }
 
     Write-OmadaSqlLog -Message ("{0} {1}" -f $Method, $Uri)

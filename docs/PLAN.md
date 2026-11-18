@@ -70,11 +70,14 @@ Each phase is one pull request, test first.
 0. **Repository framework** - build, tests, workflows, ruleset as code, issue templates, docs. *(done)*
 1. **Core** - connection object, request core, error classification (session expired, 401, missing
    OData permission, endpoint not enabled), redaction, Verbose/Debug logging. Add the README command
-   generator with the first public commands. *(in progress)*
-2. **Objects** - data connections, CRUD, history, overview, temporary-object listing and cleanup.
+   generator with the first public commands. *(done)*
+2. **Objects** - data connections, CRUD and restore, history, detailed overview. *(in progress)*
+   Temporary-object listing and cleanup moved to phase 4: filtering on the creator needs a SQL query
+   (`CreatedBy` is not in OData), so it needs the execution engine and the slot pool.
 3. **ScriptDom** - bundling (dependency lock, Dependabot `nuget`, SBOM), statement splitting,
    database-name resolution, rules and syntax checker.
-4. **Execution** - saved and ad-hoc queries, slot pool with mutex, multi-statement, result objects.
+4. **Execution** - saved and ad-hoc queries, slot pool with mutex, multi-statement, result objects,
+   `Get-OmadaSqlTempQuery` and `Clear-OmadaSqlTempQuery`.
 5. **Schema and export** - schema model and cache, export format registry.
 6. **Integration and release** - `HttpListener` mock of the Omada endpoints, README, first nightly.
 
@@ -103,6 +106,9 @@ first letter upper case (`Identity`, `Resource`), while OmadaSqlTroubleshooter s
 |---|---|
 | How to resolve the signed-in user's object ID (to compare with `CreatedBy`) | Tenant test; candidates: `actusersettingsdlg.aspx` (what the GUI scrapes) or a lookup on the user name in `tblDataObject` |
 | Whether a non-admin account can list deleted objects via OData (`deletedStatus=Deleted`) | Tenant test |
+| Whether Omada's OData list of C_P_SQLTROUBLESHOOTING pages with @odata.nextLink (what OmadaWeb.PS -Paged follows) or only with $skip | Tenant test with more objects than ODataPageSizeLimit |
+| Which properties the C_P_SQLTROUBLESHOOTING OData object exposes (EXPLICITOWNER, the shape of the data connection reference) | Inspect one object on a tenant; the module tolerates both reference shapes and a missing owner |
+| Whether SQL Troubleshooting history rows carry a 'Create' change type, used for CreatedBy in -Detailed | Inspect a history on a tenant; without it the oldest entry is used |
 | Whether `SqlDataProducer` honours `page` > 1 for results over 100 000 rows | Tenant test; until then an explicit error above the limit |
 | The response Omada returns for a failing SQL statement | Per the brief: generic HTTP 500, `The query pipeline failed at step 'ExecuteQuery'`. Confirm the body shape with a tenant test |
 | ScriptDom 180.x containing a `net462` build for Windows PowerShell 5.1 | Inspect the package in Phase 3 |
