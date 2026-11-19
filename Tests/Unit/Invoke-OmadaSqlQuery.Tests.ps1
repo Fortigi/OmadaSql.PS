@@ -32,6 +32,33 @@ Describe 'Invoke-OmadaSqlQuery' -Tag 'Unit' {
         Should -Invoke Get-OmadaSqlQueryRun -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { $ParameterSetName -eq 'Id' }
     }
 
+    It 'Runs a piped object whose Id is an int as the saved object, not as SQL text' {
+        Mock Get-OmadaSqlQueryRun -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ Target = @($Script:Target); DirectId = 42 } }
+        Mock Invoke-OmadaSqlSavedStatement -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ Ordinal = 1; Line = 1; Text = 'x'; Rows = @([pscustomobject]@{ a = 9 }); Error = $null } }
+        @([pscustomobject]@{ Id = 42 } | Invoke-OmadaSqlQuery).a | Should -Be 9
+        Should -Invoke Get-OmadaSqlQueryRun -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { $ParameterSetName -eq 'Id' -and $Parameter.Id -eq 42 -and -not $Parameter.ContainsKey('Query') }
+    }
+
+    It 'Runs piped strings as SQL text' {
+        Mock Get-OmadaSqlQueryRun -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ Target = @($Script:Target); DirectId = 0 } }
+        Mock Invoke-OmadaSqlStatementList -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ Ordinal = 1; Line = 1; Text = 'x'; Rows = @([pscustomobject]@{ a = 1 }); Error = $null } }
+        $null = 'SELECT 1', 'SELECT 2' | Invoke-OmadaSqlQuery -DataConnection 'OISES'
+        Should -Invoke Get-OmadaSqlQueryRun -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { $ParameterSetName -eq 'Query' -and $Parameter.Query -eq 'SELECT 2' }
+    }
+
+    It 'Refuses a piped object that is neither SQL text nor a saved object, before anything runs' {
+        Mock Get-OmadaSqlQueryRun -ModuleName 'OmadaSql.PS' { throw 'must not run' }
+        { [pscustomobject]@{ Name = 'x' } | Invoke-OmadaSqlQuery -ErrorAction Stop } | Should -Throw -ErrorId 'OmadaSql.InvalidArgument*'
+        Should -Invoke Get-OmadaSqlQueryRun -ModuleName 'OmadaSql.PS' -Times 0 -Exactly
+    }
+
+    It 'Takes -Query as given inside a caller pipeline that is not piped to it' {
+        Mock Get-OmadaSqlQueryRun -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ Target = @($Script:Target); DirectId = 0 } }
+        Mock Invoke-OmadaSqlStatementList -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ Ordinal = 1; Line = 1; Text = 'x'; Rows = @(); Error = $null } }
+        $null = [pscustomobject]@{ Sql = 'SELECT 3' } | ForEach-Object { Invoke-OmadaSqlQuery -Query $_.Sql -DataConnection 'OISES' }
+        Should -Invoke Get-OmadaSqlQueryRun -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { $ParameterSetName -eq 'Query' -and $Parameter.Query -eq 'SELECT 3' }
+    }
+
     It 'Returns statement results with -AsStatementResult' {
         Mock Get-OmadaSqlQueryRun -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ Target = @($Script:Target); DirectId = 0 } }
         Mock Invoke-OmadaSqlStatementList -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ Ordinal = 1; Line = 1; Text = 'x'; Rows = @(1, 2); Error = $null } }

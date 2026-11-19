@@ -33,7 +33,8 @@ function Invoke-OmadaSqlQuery {
     The exact name of a saved SQL Troubleshooting object.
 
     .PARAMETER Query
-    The T-SQL text to run. Accepts pipeline input.
+    The T-SQL text to run. Accepts pipeline input: a piped string is SQL text, a piped object with a
+    numeric Id runs that saved object, and any other piped object is refused.
 
     .PARAMETER Path
     A file holding the T-SQL text to run, read as UTF-8.
@@ -114,7 +115,8 @@ function Invoke-OmadaSqlQuery {
 
     process {
         try {
-            $Run = Get-OmadaSqlQueryRun -Context $Context -ParameterSetName $PSCmdlet.ParameterSetName -Parameter $PSBoundParameters
+            $QueryInput = Resolve-OmadaSqlQueryInput -ParameterSetName $PSCmdlet.ParameterSetName -Parameter $PSBoundParameters -InputObject $_ -ExpectingInput:$MyInvocation.ExpectingInput
+            $Run = Get-OmadaSqlQueryRun -Context $Context -ParameterSetName $QueryInput.ParameterSetName -Parameter $QueryInput.Parameter
             $Result = if ($Run.DirectId -gt 0) {
                 Invoke-OmadaSqlSavedStatement -Context $Context -Id $Run.DirectId -Target $Run.Target[0]
             }
