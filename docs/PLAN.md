@@ -22,7 +22,7 @@ tenant or documentation before it is relied on.
 | Validation | On by default, `-SkipValidation` to skip. A blocking diagnostic is a terminating error, never a prompt. Severity per rule can be overridden. |
 | Live tenant tests | None for now (no test tenant). Integration tests use a local `HttpListener` mock of the Omada endpoints. |
 | Generic bulk undelete / purge of other object types | **Parked.** Out of scope for this module for now; a separate module later can share the request and OData listing helpers. Only `TMP_` cleanup is built here. |
-| Quality gates | Required for every pull request: PSComplexity (15 cyclomatic / 15 cognitive per function, empty baseline) and PSMutant (75% over the changed files and 75% for each file, an owning unit test file for every changed source file). |
+| Quality gates | Required for every pull request: PSComplexity (15 cyclomatic / 15 cognitive per function, empty baseline) and PSMutant (75% over the changed files and 75% for each file, an owning unit test file for every changed source file, uncovered lines mutated too). |
 | Commit attribution | As in OmadaWeb.PS: no AI-attribution trailers in commits or pull request descriptions. |
 
 ## Request shapes (Verified in OmadaSqlTroubleshooter `New-OmadaQueryRequest`)

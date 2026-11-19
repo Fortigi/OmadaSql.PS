@@ -81,6 +81,10 @@ Describe 'Build/QualityGates.psd1' {
         $Floor | Should -BeLessOrEqual 100
     }
 
+    It 'mutates uncovered lines too, so code no test executes counts against the score' {
+        $Script:QualityGates.Mutation.CoveredLinesOnly | Should -BeFalse
+    }
+
     It 'requires an owning unit test file for changed source' {
         $Script:QualityGates.Mutation.RequireOwningTest | Should -BeTrue -Because 'source without a test cannot be mutation-tested'
     }

@@ -21,8 +21,9 @@
       TestPath         - where the owning unit test files live: Tests/Unit/<FunctionName>.Tests.ps1.
       Operators        - PSMutant operator classes. Adding one renumbers every mutant and lowers the
                          score, so move Thresholds.Break in the same change.
-      CoveredLinesOnly - only mutate lines the mapped tests execute; an uncovered mutant teaches
-                         nothing.
+      CoveredLinesOnly - $false: every line is mutated, also lines no mapped test executes. A
+                         mutant on an uncovered line survives and lowers the score, so code without
+                         a test cannot pass the gate. $true would leave such code unmeasured.
       SandboxSubtrees  - what PSMutant copies into its sandbox.
       Workers          - mutants evaluated in parallel. 3 on the 4-vCPU windows-latest runner.
       Thresholds       - High/Low colour the console score only. Break fails the gate when the
@@ -47,7 +48,7 @@
         SourcePath       = 'OmadaSql.PS'
         TestPath         = 'Tests/Unit'
         Operators        = @('BinaryOperator', 'BooleanLiteral', 'NegationRemoval', 'NumberLiteral')
-        CoveredLinesOnly = $true
+        CoveredLinesOnly = $false
         SandboxSubtrees  = @('OmadaSql.PS', 'Tests', 'Build')
         Workers          = 3
         Thresholds       = @{
