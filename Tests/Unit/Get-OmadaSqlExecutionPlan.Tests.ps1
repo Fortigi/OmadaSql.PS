@@ -45,9 +45,9 @@ Describe 'Get-OmadaSqlExecutionPlan' -Tag 'Unit' {
     }
 
     It 'With -SkipValidation sends a script that does not parse as one statement, unchanged' {
-        $Target = InModuleScope 'OmadaSql.PS' { Get-OmadaSqlExecutionPlan -Context (Get-OmadaSqlConnectionContext) -Sql 'SELEC 1; SELECT 2' -DataConnection 'OISES' -SkipValidation }
+        $Target = InModuleScope 'OmadaSql.PS' { Get-OmadaSqlExecutionPlan -Context (Get-OmadaSqlConnectionContext) -Sql 'SELECT * FROM; SELECT 2' -DataConnection 'OISES' -SkipValidation }
         $Target.Count | Should -Be 1
-        $Target[0].Text | Should -BeExactly 'SELEC 1; SELECT 2'
+        $Target[0].Text | Should -BeExactly 'SELECT * FROM; SELECT 2'
         $Target[0].DataConnection.Name | Should -Be 'OISES'
         $Target[0].Ordinal | Should -Be 1
         $Target[0].Line | Should -Be 1

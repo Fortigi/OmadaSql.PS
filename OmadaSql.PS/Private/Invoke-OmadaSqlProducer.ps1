@@ -19,7 +19,8 @@ function Invoke-OmadaSqlProducer {
     )
 
     $Page = Invoke-OmadaSqlPagingRequest -Context $Context -DataType 'SqlDataProducer' -DataTypeArgument @{ targetId = $Id } -Rows 100000
-    $Rows = @(Get-OmadaSqlPropertyValue -InputObject $Page -Name 'Rows' | Where-Object { $null -ne $_ })
+    $Value = Get-OmadaSqlPropertyValue -InputObject $Page -Name 'Rows'
+    $Rows = @(@($Value) | Where-Object { $null -ne $_ })
     $Records = Get-OmadaSqlPropertyValue -InputObject $Page -Name 'Records'
     if ($null -ne $Records -and [long]$Records -gt $Rows.Count) {
         throw (New-OmadaSqlErrorRecord -Kind 'InvalidResult' -Message ("The query matched {0} rows and Omada returned {1}. Narrow the query; a result larger than one page is not read." -f $Records, $Rows.Count))

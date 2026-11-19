@@ -27,7 +27,7 @@ Describe 'Invoke-OmadaSqlQuery' -Tag 'Unit' {
         Mock Get-OmadaSqlQueryRun -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ Target = @($Script:Target); DirectId = 42 } }
         Mock Invoke-OmadaSqlSavedStatement -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ Ordinal = 1; Line = 1; Text = 'x'; Rows = @([pscustomobject]@{ a = 9 }); Error = $null } }
         Mock Invoke-OmadaSqlStatementList -ModuleName 'OmadaSql.PS' { throw 'must not use a temporary object' }
-        @([pscustomobject]@{ Id = 42 } | Invoke-OmadaSqlQuery).a | Should -Be 9
+        @([pscustomobject]@{ Id = [long]42 } | Invoke-OmadaSqlQuery).a | Should -Be 9
         Should -Invoke Invoke-OmadaSqlSavedStatement -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { $Id -eq 42 }
         Should -Invoke Get-OmadaSqlQueryRun -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { $ParameterSetName -eq 'Id' }
     }
