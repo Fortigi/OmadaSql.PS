@@ -28,9 +28,11 @@ on:
 
 # Keyed on the PR number so validations of *different* PRs run in parallel, while a
 # second /validate on the same PR supersedes the first instead of racing it to write
-# the commit status.
+# the commit status. Any other comment on the PR also starts this workflow (Dispatch then
+# skips); it gets a group of its own, keyed on the comment id, because in the PR's group
+# cancel-in-progress would cancel the validation that is running.
 concurrency:
-  group: pr-validation-${{ github.event.issue.number || inputs.pr_number || github.ref }}
+  group: pr-validation-${{ github.event.issue.number || inputs.pr_number || github.ref }}-${{ (github.event_name == 'issue_comment' && !startsWith(github.event.comment.body, '/validate')) && github.event.comment.id || 'validate' }}
   cancel-in-progress: true
 
 # Every job below declares its own permissions: block, each scoped to only the API calls that job

@@ -6,7 +6,7 @@ function Set-OmadaSqlQuery {
     .DESCRIPTION
     Reads the object first and sends only what differs from it, as the SQL Troubleshooter does, so
     an unchanged value never produces a change in the object's history. When nothing differs no
-    request is sent and the object is returned as it is. A new name that another live object already
+    request is sent; with -PassThru the object is still returned. A new name that another live object already
     has is refused.
 
     .PARAMETER Id

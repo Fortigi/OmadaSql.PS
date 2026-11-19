@@ -25,8 +25,15 @@ Describe 'Set-OmadaSqlQuery' -Tag 'Unit' {
         }
     }
 
-    It 'Sends nothing when nothing differs' {
-        Set-OmadaSqlQuery -Id 7 -Query 'SELECT 1'
+    It 'Sends nothing and returns nothing when nothing differs' {
+        @(Set-OmadaSqlQuery -Id 7 -Query 'SELECT 1').Count | Should -Be 0
+        Should -Invoke Update-OmadaSqlQueryObject -ModuleName 'OmadaSql.PS' -Times 0 -Exactly
+    }
+
+    It 'Still returns the unchanged object with -PassThru when nothing differs' {
+        $Result = Set-OmadaSqlQuery -Id 7 -Query 'SELECT 1' -PassThru
+        $Result.Id | Should -Be 7
+        $Result.Query | Should -Be 'SELECT 1'
         Should -Invoke Update-OmadaSqlQueryObject -ModuleName 'OmadaSql.PS' -Times 0 -Exactly
     }
 
