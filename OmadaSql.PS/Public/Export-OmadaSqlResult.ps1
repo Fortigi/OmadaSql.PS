@@ -77,7 +77,7 @@ function Export-OmadaSqlResult {
         [object]$InputObject,
 
         [Parameter(Position = 0)]
-        [ArgumentCompleter({ param($Command, $Parameter, $Word) (Get-OmadaSqlExportFormat).Name | Where-Object { $_ -like ('{0}*' -f $Word) } })]
+        [ArgumentCompleter({ $Word = $args[2]; (Get-OmadaSqlExportFormat).Name | Where-Object { $_ -like ('{0}*' -f $Word) } })]
         [string]$Format,
 
         [string]$Path,
