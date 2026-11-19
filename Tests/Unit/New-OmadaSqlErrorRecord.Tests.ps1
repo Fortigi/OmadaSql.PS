@@ -20,6 +20,8 @@ Describe 'New-OmadaSqlErrorRecord' -Tag 'Unit' {
         @{ Kind = 'AccessDenied'; Category = 'PermissionDenied' }
         @{ Kind = 'InvalidArgument'; Category = 'InvalidArgument' }
         @{ Kind = 'ParserUnavailable'; Category = 'ResourceUnavailable' }
+        @{ Kind = 'ValidationFailed'; Category = 'InvalidData' }
+        @{ Kind = 'Busy'; Category = 'ResourceBusy' }
     ) {
         InModuleScope 'OmadaSql.PS' -Parameters @{ Kind = $Kind; Category = $Category } {
             param($Kind, $Category)

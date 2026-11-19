@@ -26,12 +26,15 @@ certificate.
 
 | Command | Synopsis |
 |---|---|
+| `Clear-OmadaSqlTempQuery` | Deletes, and with -Purge permanently removes, temporary SQL Troubleshooting objects. |
 | `Connect-OmadaSql` | Connects to an Omada Identity Cloud tenant for SQL Troubleshooting commands. |
 | `Disconnect-OmadaSql` | Removes a connection made with Connect-OmadaSql. |
 | `Get-OmadaSqlConnection` | Returns the current connection, or every connection. |
 | `Get-OmadaSqlDataConnection` | Lists the data connections SQL Troubleshooting queries can run against. |
 | `Get-OmadaSqlQuery` | Gets SQL Troubleshooting objects from Omada. |
 | `Get-OmadaSqlQueryHistory` | Gets the full change history of a SQL Troubleshooting object. |
+| `Get-OmadaSqlTempQuery` | Lists the temporary SQL Troubleshooting objects that ad-hoc queries run through. |
+| `Invoke-OmadaSqlQuery` | Runs a SQL query on an Omada Identity Cloud tenant through SQL Troubleshooting. |
 | `New-OmadaSqlQuery` | Creates a SQL Troubleshooting object in Omada. |
 | `Remove-OmadaSqlQuery` | Deletes a SQL Troubleshooting object in Omada. |
 | `Restore-OmadaSqlQuery` | Restores a deleted SQL Troubleshooting object. |

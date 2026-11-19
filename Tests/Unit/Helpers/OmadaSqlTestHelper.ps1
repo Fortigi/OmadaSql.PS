@@ -172,3 +172,18 @@ function Get-OmadaSqlTestStatement {
         Split-OmadaSqlStatement -Fragment $Parsed.Fragment -Sql $Text
     } $Sql
 }
+
+function Set-OmadaSqlTestSetting {
+    # Points the module at a settings file under TestDrive with a known profile id, and returns the id.
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Folder,
+
+        [int]$MaxTempQuerySlots = 2
+    )
+    $Guid = [guid]::NewGuid().ToString('N')
+    $Path = Join-Path $Folder ('{0}.json' -f $Guid)
+    [System.IO.File]::WriteAllText($Path, (@{ InstanceGuid = $Guid; MaxTempQuerySlots = $MaxTempQuerySlots } | ConvertTo-Json))
+    & (Get-Module -Name 'OmadaSql.PS') { param($P) $Script:OmadaSqlSettingsPath = $P } $Path
+    return $Guid
+}
