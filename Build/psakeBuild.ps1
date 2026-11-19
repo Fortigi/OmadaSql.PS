@@ -257,6 +257,19 @@ Task Build -depends Analyze {
     "Module psm1 output file: {0}" -f $OutputDirFile | Write-Host -ForegroundColor Magenta
     $ModuleContent | Out-File -FilePath $OutputDirFile -Encoding UTF8 -Force
 
+    # The T-SQL parser ships inside the package. It is fetched into the source folder (gitignored),
+    # where source-mode tests and the mutation sandbox load it, then copied into the package.
+    "Bundle verified dependencies" | Write-Host -ForegroundColor Magenta
+    & (Join-Path $PSScriptRoot -ChildPath "Update-DependencyLock.ps1") -Check
+    & (Join-Path $PSScriptRoot -ChildPath "Get-BundledDependency.ps1") -Destination $ModuleSource
+    $LibOutput = Join-Path -Path $OutputDir -ChildPath 'lib'
+    if (Test-Path -LiteralPath $LibOutput) {
+        Remove-Item -LiteralPath $LibOutput -Recurse -Force
+    }
+    Copy-Item -Path (Join-Path -Path $ModuleSource -ChildPath 'lib') -Destination $LibOutput -Recurse -Force
+    # The MIT license of the bundled parser travels with it.
+    Copy-Item -Path (Join-Path -Path $ParentPath -ChildPath 'THIRD-PARTY-NOTICES.md') -Destination $OutputDir -Force
+
     "Copy nuspec file" | Write-Host -ForegroundColor Magenta
     Copy-Item -Path (Join-Path $ParentPath -ChildPath ("{0}.nuspec" -f $ModuleName)) -Destination $OutputDir -Force
 

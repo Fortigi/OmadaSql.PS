@@ -60,7 +60,9 @@ In scope:
 - What the module writes to disk (exports, the temporary-query settings file) and what it writes to
   the Verbose and Debug streams.
 - How the module creates, reuses and removes temporary SQL Troubleshooting objects in the tenant.
-- How the module loads bundled assemblies (the SQL parser used by the syntax checker).
+- How the module loads bundled assemblies (the SQL parser used by the syntax checker). The parser is
+  pinned by version and SHA-256 in `Build/DependencyLock.psd1`; the build refuses a package or file
+  whose hash differs, and the module downloads nothing at run time.
 
 Out of scope:
 

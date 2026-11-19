@@ -86,6 +86,23 @@ gate passes again.
 ./Build/build.ps1 -Task UpdateComplexityBaseline
 ```
 
+## Bundled binaries
+
+The module ships one third-party binary: the T-SQL parser `Microsoft.SqlServer.TransactSql.ScriptDom`
+(MIT), in a `net472` build for Windows PowerShell 5.1 and a `net8.0` build for PowerShell 7. It is not
+committed. The build runs `Build/Get-BundledDependency.ps1`, which downloads the package, checks the
+package and each extracted file against the SHA-256 in `Build/DependencyLock.psd1`, and places the
+files under `OmadaSql.PS/lib` (gitignored) and in the package.
+
+Dependabot proposes new versions in `Build/Dependencies/Dependencies.csproj`. On such a branch run
+
+```powershell
+./Build/Update-DependencyLock.ps1
+```
+
+to pin the new hashes, review the diff of `Build/DependencyLock.psd1`, and commit it.
+`Tests/Unit/DependencyLock.Tests.ps1` fails while the two disagree.
+
 ## Pinning GitHub Actions
 
 Every `uses:` in `.github/workflows` references a full 40-character commit SHA with the release it

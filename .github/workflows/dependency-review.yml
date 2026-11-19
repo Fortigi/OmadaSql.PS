@@ -37,6 +37,6 @@ jobs:
           # `allow-licenses` is the supported replacement for the deprecated `deny-licenses`; the
           # two are mutually exclusive. Every licence in the dependency graph today:
           #   - MIT        - the GitHub actions used by the workflows, and
-          #                  Microsoft.SqlServer.TransactSql.ScriptDom once it is bundled
+          #                  Microsoft.SqlServer.TransactSql.ScriptDom (Build/Dependencies)
           #   - Apache-2.0 - step-security/harden-runner
           allow-licenses: MIT, Apache-2.0

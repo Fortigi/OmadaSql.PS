@@ -21,5 +21,6 @@
         'Remove-OmadaSqlQuery'       = ''
         'Restore-OmadaSqlQuery'      = ''
         'Set-OmadaSqlQuery'          = ''
+        'Test-OmadaSqlQuery'         = ''
     }
 }

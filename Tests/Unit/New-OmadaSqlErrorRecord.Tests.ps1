@@ -16,6 +16,10 @@ Describe 'New-OmadaSqlErrorRecord' -Tag 'Unit' {
         @{ Kind = 'SessionExpired'; Category = 'AuthenticationError' }
         @{ Kind = 'NotFound'; Category = 'ObjectNotFound' }
         @{ Kind = 'ServerError'; Category = 'InvalidResult' }
+        @{ Kind = 'EndpointNotEnabled'; Category = 'NotEnabled' }
+        @{ Kind = 'AccessDenied'; Category = 'PermissionDenied' }
+        @{ Kind = 'InvalidArgument'; Category = 'InvalidArgument' }
+        @{ Kind = 'ParserUnavailable'; Category = 'ResourceUnavailable' }
     ) {
         InModuleScope 'OmadaSql.PS' -Parameters @{ Kind = $Kind; Category = $Category } {
             param($Kind, $Category)

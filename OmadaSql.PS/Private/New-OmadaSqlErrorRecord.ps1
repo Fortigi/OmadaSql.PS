@@ -31,6 +31,7 @@ function New-OmadaSqlErrorRecord {
         'AccessDenied' { [System.Management.Automation.ErrorCategory]::PermissionDenied }
         'NotFound' { [System.Management.Automation.ErrorCategory]::ObjectNotFound }
         'InvalidArgument' { [System.Management.Automation.ErrorCategory]::InvalidArgument }
+        'ParserUnavailable' { [System.Management.Automation.ErrorCategory]::ResourceUnavailable }
         default { [System.Management.Automation.ErrorCategory]::InvalidResult }
     }
 

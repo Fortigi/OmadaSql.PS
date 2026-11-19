@@ -36,6 +36,7 @@ certificate.
 | `Remove-OmadaSqlQuery` | Deletes a SQL Troubleshooting object in Omada. |
 | `Restore-OmadaSqlQuery` | Restores a deleted SQL Troubleshooting object. |
 | `Set-OmadaSqlQuery` | Changes the name, SQL text or data connection of a SQL Troubleshooting object. |
+| `Test-OmadaSqlQuery` | Checks a T-SQL query for syntax errors and for what SQL Troubleshooting cannot run. |
 
 _Generated from the comment-based help by `Build/Update-ReadmeHelp.ps1`. Run `Get-Help <Command> -Full` for syntax, parameters and examples._
 
@@ -46,20 +47,23 @@ _Generated from the comment-based help by `Build/Update-ReadmeHelp.ps1`. Run `Ge
 | Area | Commands |
 |---|---|
 | Query execution | `Invoke-OmadaSqlQuery` (existing SQL Troubleshooting objects, or ad-hoc SQL through a temporary query object; database-name prefixes and `USE` resolved to data connections) |
-| Validation | `Test-OmadaSqlQuery` (T-SQL syntax, Omada compatibility rules, schema warnings); `-SkipValidation` on `Invoke-OmadaSqlQuery` |
+| Validation | Schema warnings in `Test-OmadaSqlQuery`; `-SkipValidation` on `Invoke-OmadaSqlQuery` |
 | Schema | `Get-OmadaSqlSchema` |
 | Temporary objects | `Get-OmadaSqlTempQuery`, `Clear-OmadaSqlTempQuery` |
 | Export | `Export-OmadaSqlResult`, `Register-OmadaSqlExportFormat`, `Get-OmadaSqlExportFormat` |
 
 ## REQUIREMENTS
 
-- Windows, with Windows PowerShell 5.1 or PowerShell 7.
+- Windows, with Windows PowerShell 5.1 (on .NET Framework 4.7.2 or later) or PowerShell 7.4 or later.
 - [OmadaWeb.PS](https://www.powershellgallery.com/packages/OmadaWeb.PS) 2026.9.23.47 or later
   (installed automatically as a required module).
 - An Omada Identity Cloud tenant with the SQL Troubleshooting OData endpoint
   (`C_P_SQLTROUBLESHOOTING`) enabled. Running saved queries needs Read on the OData auth element;
   ad-hoc queries also need Create, Update and Delete, because they run through a temporary query
   object.
+
+The module bundles Microsoft's T-SQL parser, Microsoft.SqlServer.TransactSql.ScriptDom (MIT), to
+validate queries locally; see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
 ## INSTALLATION
 

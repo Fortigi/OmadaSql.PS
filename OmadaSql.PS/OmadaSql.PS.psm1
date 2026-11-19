@@ -23,6 +23,12 @@ $Script:OmadaSqlCurrentConnectionId = $null
 $Script:OmadaSqlConnectionSequence = 0
 # The OData entity set of SQL Troubleshooting objects, relative to the tenant base URL.
 $Script:OmadaSqlEntityPath = 'odata/dataobjects/C_P_SQLTROUBLESHOOTING'
+# The module folder: the bundled T-SQL parser is under lib\<target framework> beneath it.
+$Script:OmadaSqlModuleRoot = $PSScriptRoot
+# The newest TSqlNNNParser type of the loaded ScriptDom assembly, resolved once (Get-OmadaSqlParserType).
+$Script:OmadaSqlParserType = $null
+# ScriptDom fragment type -> the properties that can hold a child fragment (Get-OmadaSqlFragmentChild).
+$Script:OmadaSqlFragmentPropertyCache = @{}
 # Parameter names of the loaded Invoke-OmadaRestMethod, resolved once (see Test-OmadaSqlRestMethodParameter).
 $Script:OmadaSqlRestMethodParameterCache = $null
 

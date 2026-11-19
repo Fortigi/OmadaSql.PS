@@ -17,6 +17,7 @@
     Copyright            = '(C) {0} Fortigi All rights reserved.'
     Description          = 'PowerShell module to run SQL queries against Omada Identity Cloud through the SQL Troubleshooting endpoints, manage SQL Troubleshooting objects over OData, retrieve schema and history, validate queries and export results. Authentication is handled by OmadaWeb.PS.'
     PowerShellVersion    = '5.1'
+    DotNetFrameworkVersion = '4.7.2'
     # The one runtime dependency. Every request goes through Invoke-OmadaRestMethod, so the minimum
     # version is the first that has NoInteractiveAuthentication and SkipBodyRedaction, which the
     # module relies on for unattended use.
@@ -32,7 +33,10 @@
     AliasesToExport      = @()
     FileList             = @(
         'OmadaSql.PS.psd1',
-        'OmadaSql.PS.psm1'
+        'OmadaSql.PS.psm1',
+        'THIRD-PARTY-NOTICES.md',
+        'lib\net472\Microsoft.SqlServer.TransactSql.ScriptDom.dll',
+        'lib\net8.0\Microsoft.SqlServer.TransactSql.ScriptDom.dll'
     )
     PrivateData          = @{
         PSData = @{

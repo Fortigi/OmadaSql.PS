@@ -11,5 +11,7 @@
         <file src="buildoutput\OmadaSql.PS\OmadaSql.PS.psd1" target="" />
         <file src="buildoutput\OmadaSql.PS\OmadaSql.PS.psm1" target="" />
         <file src="buildoutput\OmadaSql.PS\OmadaSql.PS.nuspec" target="" />
+        <file src="buildoutput\OmadaSql.PS\THIRD-PARTY-NOTICES.md" target="" />
+        <file src="buildoutput\OmadaSql.PS\lib\**" target="lib" />
     </files>
 </package>

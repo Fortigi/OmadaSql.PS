@@ -14,7 +14,7 @@ tenant or documentation before it is relied on.
 |---|---|
 | Platform | Windows only (OmadaWeb.PS is Windows-only), Windows PowerShell 5.1 and PowerShell 7. |
 | Authentication | Everything through `Invoke-OmadaRestMethod` (OmadaWeb.PS). Unattended use sets `NoInteractiveAuthentication`, so an expired session fails instead of opening a browser. |
-| SQL parser (ScriptDom) | **Bundled** in the package, pinned by version and SHA-256 in a dependency lock, with a Dependabot `nuget` entry. No runtime download. Requires the `net462` build for 5.1 and the `net8.0` build for 7 (**Assumption**: both are in the 180.x package). |
+| SQL parser (ScriptDom) | **Bundled** in the package, pinned by version and SHA-256 in a dependency lock, with a Dependabot `nuget` entry. No runtime download. Pinned at 180.140.0 (`Build/DependencyLock.psd1`): the `net472` build for 5.1 (needs .NET Framework 4.7.2) and the `net8.0` build for PowerShell 7.4+ (**Verified**: the package ships `net472`, `net8.0`, `netstandard2.0` and `netstandard2.1`; there is no `net462` build). Loaded on first use, not at import. |
 | Saved queries | Executed read-only: the saved object is never written, unlike the GUI, which saves before it executes. |
 | Temporary query objects | A bounded slot pool `TMP_<InstanceGuid>_<n>` per user profile (`InstanceGuid` persisted in `%LOCALAPPDATA%\OmadaSql.PS\settings.json`), each slot leased with a named mutex, soft-deleted after use and restored (`UndeleteDataObject`) on reuse. `MaxTempQuerySlots` (default 4) caps the number of objects a profile can ever leave on the tenant. |
 | Temporary object cleanup | `Clear-OmadaSqlTempQuery`: lists `TMP_*` objects, by default only those created by the signed-in user (`-AllUsers` widens), never a leased slot. Live orphans are soft-deleted; with `-Purge` soft-deleted ones are purged with `PurgeDataObject` (irreversible: `ConfirmImpact = 'High'`, never the default). Creator filtering runs through SQL Troubleshooting (`tblDataObject.CreatedBy`), because OData does not expose `CreatedBy`. See "Deleted objects" below. |
@@ -55,7 +55,8 @@ tenant or documentation before it is relied on.
 | Export | `Export-OmadaSqlResult -Format Csv\|Json\|Xml\|Text\|SqlArray\|PowerShellArray`, `Register-OmadaSqlExportFormat`, `Get-OmadaSqlExportFormat` |
 
 Query rules carried over from OmadaSqlTroubleshooter: T-SQL syntax (ScriptDom), Omada compatibility
-OMD001, OMD003, OMD004, OMD010-OMD013, schema warnings (never blocking). Database names: a
+OMD001, OMD003, OMD004, OMD010-OMD013, plus this module's OMD020 (four-part name) and OMD021 (two
+databases in one statement), schema warnings (never blocking, phase 5). Database names: a
 `[DataConnectionName].schema.table` prefix or `USE` resolves to a data connection by name and is
 removed from the SQL; four-part names and cross-database statements are rejected; multi-statement
 scripts run statement by statement.
@@ -72,10 +73,10 @@ Each phase is one pull request, test first.
 1. **Core** - connection object, request core, error classification (session expired, 401, missing
    OData permission, endpoint not enabled), redaction, Verbose/Debug logging. Add the README command
    generator with the first public commands. *(done)*
-2. **Objects** - data connections, CRUD and restore, history, detailed overview. *(in progress)*
+2. **Objects** - data connections, CRUD and restore, history, detailed overview. *(done)*
    Temporary-object listing and cleanup moved to phase 4: filtering on the creator needs a SQL query
    (`CreatedBy` is not in OData), so it needs the execution engine and the slot pool.
-3. **ScriptDom** - bundling (dependency lock, Dependabot `nuget`, SBOM), statement splitting,
+3. **ScriptDom** *(in progress)* - bundling (dependency lock, Dependabot `nuget`), statement splitting,
    database-name resolution, rules and syntax checker.
 4. **Execution** - saved and ad-hoc queries, slot pool with mutex, multi-statement, result objects,
    `Get-OmadaSqlTempQuery` and `Clear-OmadaSqlTempQuery`.
@@ -112,7 +113,8 @@ first letter upper case (`Identity`, `Resource`), while OmadaSqlTroubleshooter s
 | Whether SQL Troubleshooting history rows carry a 'Create' change type, used for CreatedBy in -Detailed | Inspect a history on a tenant; without it the oldest entry is used |
 | Whether `SqlDataProducer` honours `page` > 1 for results over 100 000 rows | Tenant test; until then an explicit error above the limit |
 | The response Omada returns for a failing SQL statement | Expected: generic HTTP 500, `The query pipeline failed at step 'ExecuteQuery'`. Confirm the body shape with a tenant test |
-| ScriptDom 180.x containing a `net462` build for Windows PowerShell 5.1 | Inspect the package in Phase 3 |
+| An SBOM for the bundled parser | Moved to phase 6 (release): generated with the release package |
+| Whether SQL Troubleshooting rejects `DECLARE` (named as unavailable, not yet confirmed) | Tenant test before a rule is added for it |
 
 ## One-time repository settings (maintainer)
 

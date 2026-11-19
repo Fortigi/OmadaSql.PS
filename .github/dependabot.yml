@@ -2,8 +2,9 @@
 # Every `uses:` is pinned to a commit SHA (Tests/Unit/WorkflowActionPins.Tests.ps1 enforces it), so
 # without this nothing would ever move them.
 #
-# A nuget block for Build/Dependencies is added together with the bundled ScriptDom assembly
-# (SQL syntax checker), so the bundled binary gets a dependency graph entry and advisories.
+# The nuget block covers Build/Dependencies, the manifest of the binaries the module bundles (the
+# T-SQL parser). A Dependabot pull request there also needs ./Build/Update-DependencyLock.ps1, which
+# re-pins the hashes; Tests/Unit/DependencyLock.Tests.ps1 fails until it has run.
 #
 # Dependabot pull requests are validated like any other: a maintainer comments /validate, and a
 # maintainer merges.
@@ -25,3 +26,13 @@ updates:
       github-actions:
         patterns:
           - "*"
+  - package-ecosystem: "nuget"
+    directory: "/Build/Dependencies"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps"
+    labels:
+      - "dependencies"

@@ -158,3 +158,17 @@ function Get-OmadaSqlParameterContract {
         RangeMax                        = $(if ($Range.Count -gt 0) { [string]$Range[0].MaxRange } else { $null })
     }
 }
+
+function Get-OmadaSqlTestStatement {
+    # The top-level statements of a T-SQL script, parsed by the module's own parser (real ScriptDom).
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyString()]
+        [string]$Sql
+    )
+    & (Get-Module -Name 'OmadaSql.PS') {
+        param($Text)
+        $Parsed = ConvertTo-OmadaSqlScriptFragment -Sql $Text
+        Split-OmadaSqlStatement -Fragment $Parsed.Fragment -Sql $Text
+    } $Sql
+}
