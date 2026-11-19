@@ -65,7 +65,8 @@ Describe 'Get-OmadaSqlFragmentChildProperty' -Tag 'Unit' {
 
     It 'Lists the properties that can hold a fragment, without the token stream' {
         InModuleScope 'OmadaSql.PS' {
-            $Name = @(Get-OmadaSqlFragmentChildProperty -Type ([Microsoft.SqlServer.TransactSql.ScriptDom.TSqlScript]) | ForEach-Object { $_.Name })
+            # The function returns its array as one object; the parentheses unroll it.
+            $Name = @((Get-OmadaSqlFragmentChildProperty -Type ([Microsoft.SqlServer.TransactSql.ScriptDom.TSqlScript])) | ForEach-Object { $_.Name })
             $Name | Should -Contain 'Batches'
             $Name | Should -Not -Contain 'ScriptTokenStream'
             $Name | Should -Not -Contain 'StartOffset'
@@ -74,7 +75,8 @@ Describe 'Get-OmadaSqlFragmentChildProperty' -Tag 'Unit' {
 
     It 'Leaves out string properties although a string is a collection of characters' {
         InModuleScope 'OmadaSql.PS' {
-            $Name = @(Get-OmadaSqlFragmentChildProperty -Type ([Microsoft.SqlServer.TransactSql.ScriptDom.Identifier]) | ForEach-Object { $_.Name })
+            # The function returns its array as one object; the parentheses unroll it.
+            $Name = @((Get-OmadaSqlFragmentChildProperty -Type ([Microsoft.SqlServer.TransactSql.ScriptDom.Identifier])) | ForEach-Object { $_.Name })
             $Name | Should -Not -Contain 'Value'
         }
     }

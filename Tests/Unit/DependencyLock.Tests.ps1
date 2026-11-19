@@ -20,7 +20,7 @@ Describe 'Build/DependencyLock.psd1' {
     It 'pins every artifact and every file by a 64-character lower-case SHA-256' {
         foreach ($Artifact in $Script:Lock.Artifacts) {
             $Artifact.Sha256 | Should -MatchExactly '^[0-9a-f]{64}$'
-            $Artifact.Url | Should -BeLike ('https://api.nuget.org/*/{0}.nupkg' -f $Artifact.Version)
+            $Artifact.Url | Should -BeLike ('https://api.nuget.org/*/{0}/*.{0}.nupkg' -f $Artifact.Version)
             foreach ($File in $Artifact.Files) {
                 $File.Sha256 | Should -MatchExactly '^[0-9a-f]{64}$'
             }
