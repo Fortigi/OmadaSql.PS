@@ -16,6 +16,16 @@ function Get-OmadaSqlExportFormat {
 
     Shows every format and its options.
 
+    .EXAMPLE
+    (Get-OmadaSqlExportFormat -Name Csv).Option
+
+    Lists the options the Csv format accepts in Export-OmadaSqlResult -Option.
+
+    .EXAMPLE
+    Get-OmadaSqlExportFormat | Where-Object { -not $_.BuiltIn }
+
+    Shows the formats registered in this session with Register-OmadaSqlExportFormat.
+
     .LINK
     Export-OmadaSqlResult
 

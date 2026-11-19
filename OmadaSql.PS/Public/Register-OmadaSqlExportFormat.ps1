@@ -44,6 +44,21 @@ function Register-OmadaSqlExportFormat {
 
     Adds a Markdown table format; Export-OmadaSqlResult -Path .\result.md then uses it.
 
+    .EXAMPLE
+    Register-OmadaSqlExportFormat -Name IdList -Option Separator -ScriptBlock {
+        param($Row, $Column, $Option)
+        $Separator = if ($Option.ContainsKey('Separator')) { $Option['Separator'] } else { ',' }
+        (@($Row) | ForEach-Object { $_.($Column[0]) }) -join $Separator
+    }
+
+    Adds a format that joins the first column on one line; Export-OmadaSqlResult -Format IdList
+    -Option @{ Separator = ' ' } passes a separator.
+
+    .EXAMPLE
+    Register-OmadaSqlExportFormat -Name Markdown -Extension .md -Force -ScriptBlock { param($Row, $Column) '| {0} |' -f ($Column -join ' | ') }
+
+    Replaces the Markdown format registered earlier in the session.
+
     .LINK
     Export-OmadaSqlResult
 
