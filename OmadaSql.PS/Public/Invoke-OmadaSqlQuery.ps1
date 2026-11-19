@@ -77,7 +77,7 @@ function Invoke-OmadaSqlQuery {
     https://github.com/Fortigi/OmadaSql.PS
     #>
     [CmdletBinding(DefaultParameterSetName = 'Query')]
-    [OutputType([pscustomobject], 'OmadaSql.StatementResult')]
+    [OutputType('System.Management.Automation.PSCustomObject', 'OmadaSql.StatementResult')]
     param(
         [Parameter(ParameterSetName = 'Id', Mandatory = $true, ValueFromPipelineByPropertyName = $true)]
         [ValidateRange(1, [long]::MaxValue)]
