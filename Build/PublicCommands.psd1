@@ -18,6 +18,7 @@
         'Get-OmadaSqlDataConnection' = ''
         'Get-OmadaSqlQuery'          = ''
         'Get-OmadaSqlQueryHistory'   = ''
+        'Get-OmadaSqlSchema'         = ''
         'Get-OmadaSqlTempQuery'      = ''
         'Invoke-OmadaSqlQuery'       = ''
         'New-OmadaSqlQuery'          = ''

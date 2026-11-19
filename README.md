@@ -33,6 +33,7 @@ certificate.
 | `Get-OmadaSqlDataConnection` | Lists the data connections SQL Troubleshooting queries can run against. |
 | `Get-OmadaSqlQuery` | Gets SQL Troubleshooting objects from Omada. |
 | `Get-OmadaSqlQueryHistory` | Gets the full change history of a SQL Troubleshooting object. |
+| `Get-OmadaSqlSchema` | Lists the tables and views of a data connection, with their columns and data types. |
 | `Get-OmadaSqlTempQuery` | Lists the temporary SQL Troubleshooting objects that ad-hoc queries run through. |
 | `Invoke-OmadaSqlQuery` | Runs a SQL query on an Omada Identity Cloud tenant through SQL Troubleshooting. |
 | `New-OmadaSqlQuery` | Creates a SQL Troubleshooting object in Omada. |
