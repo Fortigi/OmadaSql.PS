@@ -1,0 +1,71 @@
+name: Feature request
+description: Suggest a new feature or enhancement for OmadaSql.PS
+title: "[Feature]: "
+labels: ["enhancement", "triage"]
+type: "Feature"
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting an idea! Please describe the problem and proposed solution as clearly as possible.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem statement
+      description: Is your feature request related to a problem? Describe what you're trying to do and what currently blocks or hinders it.
+      placeholder: e.g. "I need to run the same query against every data connection..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed solution
+      description: Describe the feature or change you'd like to see.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the module does this relate to?
+      multiple: true
+      options:
+        - Connection / authentication
+        - Query execution (ad-hoc or saved)
+        - Temporary query objects and cleanup
+        - SQL Troubleshooting object management (create, update, delete)
+        - History and object overview
+        - Schema retrieval
+        - Validation rules and syntax checker
+        - Export formats
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any alternative solutions, workarounds, or features you've considered.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional context
+      description: Add any other context, e.g. how OmadaSqlTroubleshooter behaves for the same case, or links to related Omada documentation.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I have searched existing issues and this feature hasn't already been requested
+          required: true

@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package>
+    <metadata>
+        <id>OmadaSql.PS</id>
+        <version>$VERSION$</version>
+        <authors>Fortigi</authors>
+        <description>PowerShell module to run SQL queries against Omada Identity Cloud through the SQL Troubleshooting endpoints, manage SQL Troubleshooting objects over OData, retrieve schema and history, validate queries and export results. Authentication is handled by OmadaWeb.PS.</description>
+        <copyright>Copyright $YEAR$ Fortigi</copyright>
+    </metadata>
+    <files>
+        <file src="buildoutput\OmadaSql.PS\OmadaSql.PS.psd1" target="" />
+        <file src="buildoutput\OmadaSql.PS\OmadaSql.PS.psm1" target="" />
+        <file src="buildoutput\OmadaSql.PS\OmadaSql.PS.nuspec" target="" />
+    </files>
+</package>

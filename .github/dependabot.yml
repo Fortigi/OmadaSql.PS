@@ -1,0 +1,27 @@
+# Dependabot keeps the pinned action versions used by the workflows in .github/workflows up to date.
+# Every `uses:` is pinned to a commit SHA (Tests/Unit/WorkflowActionPins.Tests.ps1 enforces it), so
+# without this nothing would ever move them.
+#
+# A nuget block for Build/Dependencies is added together with the bundled ScriptDom assembly
+# (SQL syntax checker), so the bundled binary gets a dependency graph entry and advisories.
+#
+# Dependabot pull requests are validated like any other: a maintainer comments /validate, and a
+# maintainer merges.
+#
+# GitHub reads this file from the default branch only.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "ci"
+    labels:
+      - "dependencies"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
