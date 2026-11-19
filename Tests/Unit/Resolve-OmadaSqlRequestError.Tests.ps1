@@ -50,6 +50,14 @@ Describe 'Resolve-OmadaSqlRequestError' -Tag 'Unit' {
         }
     }
 
+    It 'Assumes no earlier read when -ReadSucceeded is omitted' {
+        $ErrorRecord = New-OmadaSqlTestHttpError -StatusCode 401
+        InModuleScope 'OmadaSql.PS' -Parameters @{ ErrorRecord = $ErrorRecord; Uri = $Script:ODataUri } {
+            param($ErrorRecord, $Uri)
+            (Resolve-OmadaSqlRequestError -ErrorRecord $ErrorRecord -Method POST -Uri $Uri).Kind | Should -Be 'SessionExpired'
+        }
+    }
+
     It 'Classifies a 401 on a read as SessionExpired even after an earlier read' {
         $ErrorRecord = New-OmadaSqlTestHttpError -StatusCode 401
         InModuleScope 'OmadaSql.PS' -Parameters @{ ErrorRecord = $ErrorRecord; Uri = $Script:ODataUri } {
@@ -187,5 +195,27 @@ Describe 'Get-OmadaSqlErrorDetail escapes' -Tag 'Unit' {
             Get-OmadaSqlErrorDetail -ErrorRecord $ErrorRecord | Should -BeLike "*segment 'C_P_SQLTROUBLESHOOTING'.*"
             (Resolve-OmadaSqlRequestError -ErrorRecord $ErrorRecord -Method GET -Uri 'https://tenant.omada.cloud/odata/dataobjects/C_P_SQLTROUBLESHOOTING').Kind | Should -Be 'EndpointNotEnabled'
         }
+    }
+}
+
+Describe 'Resolve-OmadaSqlRequestError parameter contract' -Tag 'Unit' {
+    # Parameter declarations run no code a test could observe, so the mutation gate's mutants of
+    # Mandatory, Position, pipeline binding and ValidateRange are caught only by asserting the contract.
+    It '<Command> -<Parameter> <ParameterSet>' -ForEach @(
+        @{ Command = 'Resolve-OmadaSqlRequestError'; Parameter = 'ErrorRecord'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Resolve-OmadaSqlRequestError'; Parameter = 'Method'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Resolve-OmadaSqlRequestError'; Parameter = 'Uri'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Get-OmadaSqlErrorDetail'; Parameter = 'ErrorRecord'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Get-OmadaSqlRequestErrorMessage'; Parameter = 'Kind'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Get-OmadaSqlRequestErrorMessage'; Parameter = 'Method'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Get-OmadaSqlRequestErrorMessage'; Parameter = 'Uri'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+    ) {
+        $Contract = Get-OmadaSqlParameterContract -CommandName $Command -ParameterName $Parameter -ParameterSetName $ParameterSet
+        $Contract.Mandatory | Should -Be $Mandatory
+        $Contract.Position | Should -Be $Position
+        $Contract.ValueFromPipeline | Should -Be $ValueFromPipeline
+        $Contract.ValueFromPipelineByPropertyName | Should -Be $ValueFromPipelineByPropertyName
+        $Contract.RangeMin | Should -Be $RangeMin
+        $Contract.RangeMax | Should -Be $RangeMax
     }
 }

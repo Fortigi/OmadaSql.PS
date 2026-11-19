@@ -37,3 +37,19 @@ Describe 'Protect-OmadaSqlLogMessage' -Tag 'Unit' {
         }
     }
 }
+
+Describe 'Protect-OmadaSqlLogMessage parameter contract' -Tag 'Unit' {
+    # Parameter declarations run no code a test could observe, so the mutation gate's mutants of
+    # Mandatory, Position, pipeline binding and ValidateRange are caught only by asserting the contract.
+    It '<Command> -<Parameter> <ParameterSet>' -ForEach @(
+        @{ Command = 'Protect-OmadaSqlLogMessage'; Parameter = 'Message'; ParameterSet = ''; Mandatory = $false; Position = 0; ValueFromPipeline = $true; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+    ) {
+        $Contract = Get-OmadaSqlParameterContract -CommandName $Command -ParameterName $Parameter -ParameterSetName $ParameterSet
+        $Contract.Mandatory | Should -Be $Mandatory
+        $Contract.Position | Should -Be $Position
+        $Contract.ValueFromPipeline | Should -Be $ValueFromPipeline
+        $Contract.ValueFromPipelineByPropertyName | Should -Be $ValueFromPipelineByPropertyName
+        $Contract.RangeMin | Should -Be $RangeMin
+        $Contract.RangeMax | Should -Be $RangeMax
+    }
+}

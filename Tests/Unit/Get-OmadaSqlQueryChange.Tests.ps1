@@ -69,3 +69,23 @@ Describe 'Update-OmadaSqlQueryObject' -Tag 'Unit' {
         Should -Invoke Assert-OmadaSqlQueryNameAvailable -ModuleName 'OmadaSql.PS' -Times 0 -Exactly
     }
 }
+
+Describe 'Get-OmadaSqlQueryChange parameter contract' -Tag 'Unit' {
+    # Parameter declarations run no code a test could observe, so the mutation gate's mutants of
+    # Mandatory, Position, pipeline binding and ValidateRange are caught only by asserting the contract.
+    It '<Command> -<Parameter> <ParameterSet>' -ForEach @(
+        @{ Command = 'Get-OmadaSqlQueryChange'; Parameter = 'Current'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Get-OmadaSqlQueryChange'; Parameter = 'Desired'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Update-OmadaSqlQueryObject'; Parameter = 'Context'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Update-OmadaSqlQueryObject'; Parameter = 'Id'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Update-OmadaSqlQueryObject'; Parameter = 'Body'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+    ) {
+        $Contract = Get-OmadaSqlParameterContract -CommandName $Command -ParameterName $Parameter -ParameterSetName $ParameterSet
+        $Contract.Mandatory | Should -Be $Mandatory
+        $Contract.Position | Should -Be $Position
+        $Contract.ValueFromPipeline | Should -Be $ValueFromPipeline
+        $Contract.ValueFromPipelineByPropertyName | Should -Be $ValueFromPipelineByPropertyName
+        $Contract.RangeMin | Should -Be $RangeMin
+        $Contract.RangeMax | Should -Be $RangeMax
+    }
+}

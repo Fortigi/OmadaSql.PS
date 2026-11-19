@@ -129,3 +129,21 @@ Describe 'Get-OmadaSqlDataConnectionList view and row selection' -Tag 'Unit' {
         Should -Invoke Invoke-OmadaSqlRequest -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { $Path -eq 'dataobjdlg.aspx?DOID=555' }
     }
 }
+
+Describe 'Get-OmadaSqlDataConnectionList parameter contract' -Tag 'Unit' {
+    # Parameter declarations run no code a test could observe, so the mutation gate's mutants of
+    # Mandatory, Position, pipeline binding and ValidateRange are caught only by asserting the contract.
+    It '<Command> -<Parameter> <ParameterSet>' -ForEach @(
+        @{ Command = 'Get-OmadaSqlDataConnectionList'; Parameter = 'Context'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Resolve-OmadaSqlDataConnection'; Parameter = 'Context'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Resolve-OmadaSqlDataConnection'; Parameter = 'DataConnection'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+    ) {
+        $Contract = Get-OmadaSqlParameterContract -CommandName $Command -ParameterName $Parameter -ParameterSetName $ParameterSet
+        $Contract.Mandatory | Should -Be $Mandatory
+        $Contract.Position | Should -Be $Position
+        $Contract.ValueFromPipeline | Should -Be $ValueFromPipeline
+        $Contract.ValueFromPipelineByPropertyName | Should -Be $ValueFromPipelineByPropertyName
+        $Contract.RangeMin | Should -Be $RangeMin
+        $Contract.RangeMax | Should -Be $RangeMax
+    }
+}

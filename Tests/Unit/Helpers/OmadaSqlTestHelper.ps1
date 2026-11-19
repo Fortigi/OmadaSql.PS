@@ -120,3 +120,41 @@ function Initialize-OmadaSqlTestConnection {
     Disconnect-OmadaSql -All
     Connect-OmadaSql -Url 'https://tenant.omada.cloud' -AuthenticationType OAuth -ClientId 'client' -OAuthCertificateThumbprint 'AB12' -SkipConnectionTest -PassThru
 }
+
+function Get-OmadaSqlParameterContract {
+    <#
+        The declared contract of one parameter, read from the loaded command: whether it is mandatory,
+        its position, whether it binds from the pipeline, and its ValidateRange bounds as text.
+        Parameter declarations are not code any test executes, so only an assertion on this contract
+        can tell a test run apart from one where, say, Mandatory was flipped (the mutation gate
+        mutates those lines too).
+    #>
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$CommandName,
+
+        [Parameter(Mandatory = $true)]
+        [string]$ParameterName,
+
+        [string]$ParameterSetName
+    )
+
+    $Command = & (Get-Module -Name 'OmadaSql.PS') { param($Name) Get-Command -Name $Name -CommandType Function } $CommandName
+    $Parameter = $Command.Parameters[$ParameterName]
+    if ($null -eq $Parameter) {
+        throw ("{0} has no parameter {1}." -f $CommandName, $ParameterName)
+    }
+    $Attribute = @($Parameter.Attributes | Where-Object {
+            $_ -is [System.Management.Automation.ParameterAttribute] -and
+            ([string]::IsNullOrEmpty($ParameterSetName) -or $_.ParameterSetName -eq $ParameterSetName)
+        })[0]
+    $Range = @($Parameter.Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateRangeAttribute] })
+    [pscustomobject]@{
+        Mandatory                       = [bool]$Attribute.Mandatory
+        Position                        = $(if ($Attribute.Position -eq [int]::MinValue) { $null } else { $Attribute.Position })
+        ValueFromPipeline               = [bool]$Attribute.ValueFromPipeline
+        ValueFromPipelineByPropertyName = [bool]$Attribute.ValueFromPipelineByPropertyName
+        RangeMin                        = $(if ($Range.Count -gt 0) { [string]$Range[0].MinRange } else { $null })
+        RangeMax                        = $(if ($Range.Count -gt 0) { [string]$Range[0].MaxRange } else { $null })
+    }
+}

@@ -68,11 +68,40 @@ Describe 'Invoke-OmadaSqlPagingRequest' -Tag 'Unit' {
         }
     }
 
+    It 'Asks for 1000 rows unless told otherwise' {
+        Mock Invoke-OmadaSqlRequest -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ d = [pscustomobject]@{ Records = 0; Rows = @() } } }
+        InModuleScope 'OmadaSql.PS' {
+            $null = Invoke-OmadaSqlPagingRequest -Context (Get-OmadaSqlConnectionContext) -DataType 'Views' -DataTypeArgument @{}
+        }
+        Should -Invoke Invoke-OmadaSqlRequest -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { $Body.rows -eq 1000 }
+    }
+
     It 'Fails with InvalidResult when the response has no d payload' {
         Mock Invoke-OmadaSqlRequest -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ other = 1 } }
         InModuleScope 'OmadaSql.PS' {
             $Context = Get-OmadaSqlConnectionContext
             { Invoke-OmadaSqlPagingRequest -Context $Context -DataType 'Views' -DataTypeArgument @{} } | Should -Throw -ErrorId 'OmadaSql.InvalidResult'
         }
+    }
+}
+
+Describe 'Invoke-OmadaSqlPagingRequest parameter contract' -Tag 'Unit' {
+    # Parameter declarations run no code a test could observe, so the mutation gate's mutants of
+    # Mandatory, Position, pipeline binding and ValidateRange are caught only by asserting the contract.
+    It '<Command> -<Parameter> <ParameterSet>' -ForEach @(
+        @{ Command = 'Invoke-OmadaSqlPagingRequest'; Parameter = 'Context'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Invoke-OmadaSqlPagingRequest'; Parameter = 'DataType'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Invoke-OmadaSqlPagingRequest'; Parameter = 'DataTypeArgument'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Invoke-OmadaSqlPagingRequest'; Parameter = 'Rows'; ParameterSet = ''; Mandatory = $false; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = '1'; RangeMax = '100000' }
+        @{ Command = 'New-OmadaSqlPagingRequestBody'; Parameter = 'DataType'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'New-OmadaSqlPagingRequestBody'; Parameter = 'DataTypeArgument'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+    ) {
+        $Contract = Get-OmadaSqlParameterContract -CommandName $Command -ParameterName $Parameter -ParameterSetName $ParameterSet
+        $Contract.Mandatory | Should -Be $Mandatory
+        $Contract.Position | Should -Be $Position
+        $Contract.ValueFromPipeline | Should -Be $ValueFromPipeline
+        $Contract.ValueFromPipelineByPropertyName | Should -Be $ValueFromPipelineByPropertyName
+        $Contract.RangeMin | Should -Be $RangeMin
+        $Contract.RangeMax | Should -Be $RangeMax
     }
 }
