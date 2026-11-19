@@ -29,6 +29,10 @@ $Script:OmadaSqlModuleRoot = $PSScriptRoot
 $Script:OmadaSqlParserType = $null
 # ScriptDom fragment type -> the properties that can hold a child fragment (Get-OmadaSqlFragmentChild).
 $Script:OmadaSqlFragmentPropertyCache = @{}
+# settings.json of this user profile (InstanceGuid, MaxTempQuerySlots); $null = %LOCALAPPDATA%\OmadaSql.PS.
+$Script:OmadaSqlSettingsPath = $null
+# How long Invoke-OmadaSqlQuery waits for a free temporary query slot before it gives up.
+$Script:OmadaSqlSlotTimeoutSeconds = 300
 # Parameter names of the loaded Invoke-OmadaRestMethod, resolved once (see Test-OmadaSqlRestMethodParameter).
 $Script:OmadaSqlRestMethodParameterCache = $null
 

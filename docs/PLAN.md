@@ -17,7 +17,7 @@ tenant or documentation before it is relied on.
 | SQL parser (ScriptDom) | **Bundled** in the package, pinned by version and SHA-256 in a dependency lock, with a Dependabot `nuget` entry. No runtime download. Pinned at 180.140.0 (`Build/DependencyLock.psd1`): the `net472` build for 5.1 (needs .NET Framework 4.7.2) and the `net8.0` build for PowerShell 7.4+ (**Verified**: the package ships `net472`, `net8.0`, `netstandard2.0` and `netstandard2.1`; there is no `net462` build). Loaded on first use, not at import. |
 | Saved queries | Executed read-only: the saved object is never written, unlike the GUI, which saves before it executes. |
 | Temporary query objects | A bounded slot pool `TMP_<InstanceGuid>_<n>` per user profile (`InstanceGuid` persisted in `%LOCALAPPDATA%\OmadaSql.PS\settings.json`), each slot leased with a named mutex, soft-deleted after use and restored (`UndeleteDataObject`) on reuse. `MaxTempQuerySlots` (default 4) caps the number of objects a profile can ever leave on the tenant. |
-| Temporary object cleanup | `Clear-OmadaSqlTempQuery`: lists `TMP_*` objects, by default only those created by the signed-in user (`-AllUsers` widens), never a leased slot. Live orphans are soft-deleted; with `-Purge` soft-deleted ones are purged with `PurgeDataObject` (irreversible: `ConfirmImpact = 'High'`, never the default). Creator filtering runs through SQL Troubleshooting (`tblDataObject.CreatedBy`), because OData does not expose `CreatedBy`. See "Deleted objects" below. |
+| Temporary object cleanup | `Get-OmadaSqlTempQuery` / `Clear-OmadaSqlTempQuery`: by default only this profile's slots, identified by the `InstanceGuid` in the object name (`-All` widens to every `TMP_` object), never a leased slot. Live objects are soft-deleted; with `-Purge` they are also purged with `PurgeDataObject` (irreversible: `ConfirmImpact = 'High'`, never the default). Filtering on the name instead of `tblDataObject.CreatedBy` keeps cleanup independent of SQL Troubleshooting and of resolving the signed-in user's object ID; it also means another profile of the same user is only covered by `-All`. See "Deleted objects" below. |
 | Object overview | `Get-OmadaSqlQuery -Detailed`: all OData properties, the resolved data connection, the owner (created by / changed by) and the history in one object. |
 | Validation | On by default, `-SkipValidation` to skip. A blocking diagnostic is a terminating error, never a prompt. Severity per rule can be overridden. |
 | Live tenant tests | None for now (no test tenant). Integration tests use a local `HttpListener` mock of the Omada endpoints. |
@@ -74,11 +74,10 @@ Each phase is one pull request, test first.
    OData permission, endpoint not enabled), redaction, Verbose/Debug logging. Add the README command
    generator with the first public commands. *(done)*
 2. **Objects** - data connections, CRUD and restore, history, detailed overview. *(done)*
-   Temporary-object listing and cleanup moved to phase 4: filtering on the creator needs a SQL query
-   (`CreatedBy` is not in OData), so it needs the execution engine and the slot pool.
-3. **ScriptDom** *(in progress)* - bundling (dependency lock, Dependabot `nuget`), statement splitting,
+   Temporary-object listing and cleanup moved to phase 4, together with the slot pool.
+3. **ScriptDom** *(done)* - bundling (dependency lock, Dependabot `nuget`), statement splitting,
    database-name resolution, rules and syntax checker.
-4. **Execution** - saved and ad-hoc queries, slot pool with mutex, multi-statement, result objects,
+4. **Execution** *(in progress)* - saved and ad-hoc queries, slot pool with mutex, multi-statement, result objects,
    `Get-OmadaSqlTempQuery` and `Clear-OmadaSqlTempQuery`.
 5. **Schema and export** - schema model and cache, export format registry.
 6. **Integration and release** - `HttpListener` mock of the Omada endpoints, README, first nightly.
@@ -106,7 +105,6 @@ first letter upper case (`Identity`, `Resource`), while OmadaSqlTroubleshooter s
 
 | Item | How to settle it |
 |---|---|
-| How to resolve the signed-in user's object ID (to compare with `CreatedBy`) | Tenant test; candidates: `actusersettingsdlg.aspx` (the page the web UI reads it from) or a lookup on the user name in `tblDataObject` |
 | Whether a non-admin account can list deleted objects via OData (`deletedStatus=Deleted`) | Tenant test |
 | Whether Omada's OData list of C_P_SQLTROUBLESHOOTING pages with @odata.nextLink (what OmadaWeb.PS -Paged follows) or only with $skip | Tenant test with more objects than ODataPageSizeLimit |
 | Which properties the C_P_SQLTROUBLESHOOTING OData object exposes (EXPLICITOWNER, the shape of the data connection reference) | Inspect one object on a tenant; the module tolerates both reference shapes and a missing owner |

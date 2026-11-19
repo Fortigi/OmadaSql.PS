@@ -11,12 +11,15 @@
 #>
 @{
     WrappedCommands = @{
+        'Clear-OmadaSqlTempQuery'    = ''
         'Connect-OmadaSql'           = ''
         'Disconnect-OmadaSql'        = ''
         'Get-OmadaSqlConnection'     = ''
         'Get-OmadaSqlDataConnection' = ''
         'Get-OmadaSqlQuery'          = ''
         'Get-OmadaSqlQueryHistory'   = ''
+        'Get-OmadaSqlTempQuery'      = ''
+        'Invoke-OmadaSqlQuery'       = ''
         'New-OmadaSqlQuery'          = ''
         'Remove-OmadaSqlQuery'       = ''
         'Restore-OmadaSqlQuery'      = ''

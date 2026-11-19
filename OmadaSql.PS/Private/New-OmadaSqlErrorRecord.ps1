@@ -32,6 +32,8 @@ function New-OmadaSqlErrorRecord {
         'NotFound' { [System.Management.Automation.ErrorCategory]::ObjectNotFound }
         'InvalidArgument' { [System.Management.Automation.ErrorCategory]::InvalidArgument }
         'ParserUnavailable' { [System.Management.Automation.ErrorCategory]::ResourceUnavailable }
+        'ValidationFailed' { [System.Management.Automation.ErrorCategory]::InvalidData }
+        'Busy' { [System.Management.Automation.ErrorCategory]::ResourceBusy }
         default { [System.Management.Automation.ErrorCategory]::InvalidResult }
     }
 
