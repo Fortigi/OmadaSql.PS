@@ -187,3 +187,82 @@ function Set-OmadaSqlTestSetting {
     & (Get-Module -Name 'OmadaSql.PS') { param($P) $Script:OmadaSqlSettingsPath = $P } $Path
     return $Guid
 }
+
+function Get-OmadaSqlTestSchemaData {
+    # A small schema in the GetSqlSchema answer shape: Person in dbo and audit, Event only outside dbo.
+    [pscustomobject]@{
+        'dbo.Person'    = @('Id int', 'DisplayName nvarchar(255)', 'Deleted bit')
+        'dbo.Contract'  = @('Id int', 'PersonId int', 'Amount decimal(18,2)')
+        'audit.Person'  = @('Id int', 'At datetime')
+        'audit.Event'   = @('Id int', 'Payload nvarchar(max)')
+        'graphql.Event' = @('Id int', 'Name nvarchar(50)')
+    }
+}
+
+function Find-OmadaSqlTestSchemaFinding {
+    # The schema findings of a script against Get-OmadaSqlTestSchemaData, as 'RuleId:name' labels in
+    # document order, the name being the column or table as written.
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Sql
+    )
+    $Statement = @(Get-OmadaSqlTestStatement -Sql $Sql)
+    & (Get-Module -Name 'OmadaSql.PS') {
+        param($Statement, $Data)
+        $Model = ConvertTo-OmadaSqlSchemaModel -Data $Data -DataConnection ([pscustomobject]@{ Name = 'OISES'; Id = 1001 })
+        $Name = Get-OmadaSqlScriptDefinedName -Statement $Statement
+        foreach ($Item in $Statement) {
+            foreach ($Hit in @(Find-OmadaSqlSchemaFinding -Fragment $Item.Fragment -Model $Model -ScriptName $Name)) {
+                $Part = if ($Hit.RuleId -eq 'OMD030') { $Hit.Fragment.SchemaObject.Identifiers } else { $Hit.Fragment.MultiPartIdentifier.Identifiers }
+                '{0}:{1}' -f $Hit.RuleId, ((@($Part) | ForEach-Object { $_.Value }) -join '.')
+            }
+        }
+    } $Statement (Get-OmadaSqlTestSchemaData)
+}
+
+function Get-OmadaSqlTestSchemaCase {
+    # Scripts and the schema findings they must give (see Find-OmadaSqlTestSchemaFinding).
+    @{ Case = 'a known qualified column'; Sql = 'SELECT [a] = p.DisplayName FROM dbo.Person AS p'; Expected = @() }
+    @{ Case = 'an unknown qualified column'; Sql = 'SELECT [a] = p.Nope FROM dbo.Person AS p'; Expected = @('OMD031:p.Nope') }
+    @{ Case = 'an unknown unqualified column'; Sql = 'SELECT [a] = Nope FROM dbo.Person'; Expected = @('OMD031:Nope') }
+    @{ Case = 'a column without any table'; Sql = 'SELECT [a] = Nope'; Expected = @('OMD031:Nope') }
+    @{ Case = 'a column two joined tables have'; Sql = 'SELECT [a] = Id FROM dbo.Person AS p JOIN dbo.Contract AS c ON c.PersonId = p.Id'; Expected = @('OMD032:Id') }
+    @{ Case = 'an unknown table with a schema'; Sql = 'SELECT [a] = 1 FROM dbo.Nope'; Expected = @('OMD030:dbo.Nope') }
+    @{ Case = 'an unknown table without a schema'; Sql = 'SELECT [a] = 1 FROM Nope'; Expected = @('OMD030:Nope') }
+    @{ Case = 'an unknown table with a database name'; Sql = 'SELECT [a] = 1 FROM OISES.dbo.Nope'; Expected = @('OMD030:OISES.dbo.Nope') }
+    @{ Case = 'a known table with a database name'; Sql = 'SELECT [a] = Deleted FROM OISES.dbo.Person'; Expected = @() }
+    @{ Case = 'a name in dbo and another schema'; Sql = 'SELECT [a] = DisplayName FROM Person'; Expected = @() }
+    @{ Case = 'a name in two schemas, neither dbo'; Sql = 'SELECT [a] = Nope FROM Event'; Expected = @() }
+    @{ Case = 'a table outside dbo'; Sql = 'SELECT [a] = At FROM audit.Person'; Expected = @() }
+    @{ Case = 'names in another case'; Sql = 'SELECT [a] = p.displayname FROM DBO.PERSON AS p'; Expected = @() }
+    @{ Case = 'a temporary table'; Sql = 'SELECT [a] = x FROM #t'; Expected = @() }
+    @{ Case = 'a table variable'; Sql = 'SELECT [a] = x FROM @t'; Expected = @() }
+    @{ Case = 'a four-part name'; Sql = 'SELECT [a] = x FROM srv.db.dbo.T'; Expected = @() }
+    @{ Case = 'a CTE'; Sql = 'WITH c AS (SELECT [Id] = Id FROM dbo.Person) SELECT [a] = Nope FROM c'; Expected = @() }
+    @{ Case = 'a column a CTE body does not have'; Sql = 'WITH c AS (SELECT [x] = Nope FROM dbo.Person) SELECT [a] = x FROM c'; Expected = @('OMD031:Nope') }
+    @{ Case = 'a derived table'; Sql = 'SELECT [a] = d.x FROM (SELECT [x] = Id FROM dbo.Person) AS d'; Expected = @() }
+    @{ Case = 'an unknown column inside a derived table'; Sql = 'SELECT [a] = Nope FROM (SELECT [x] = Nope FROM dbo.Person) AS d'; Expected = @('OMD031:Nope') }
+    @{ Case = 'a correlated subquery'; Sql = 'SELECT [a] = p.Id FROM dbo.Person AS p WHERE EXISTS (SELECT [x] = 1 FROM dbo.Contract AS c WHERE c.PersonId = p.Id)'; Expected = @() }
+    @{ Case = 'an outer column without a table name'; Sql = 'SELECT [a] = 1 FROM dbo.Person AS p WHERE EXISTS (SELECT [x] = 1 FROM dbo.Contract AS c WHERE DisplayName = 1)'; Expected = @() }
+    @{ Case = 'an inner column that shadows an outer one'; Sql = 'SELECT [a] = 1 FROM dbo.Person AS p WHERE EXISTS (SELECT [x] = 1 FROM dbo.Contract AS c WHERE Id = 1)'; Expected = @() }
+    @{ Case = 'an unknown column in a subquery'; Sql = 'SELECT [a] = 1 FROM dbo.Person AS p WHERE EXISTS (SELECT [x] = 1 FROM dbo.Contract AS c WHERE c.Nope = p.Id)'; Expected = @('OMD031:c.Nope') }
+    @{ Case = 'a SELECT-list alias in ORDER BY'; Sql = 'SELECT [Label] = DisplayName FROM dbo.Person ORDER BY Label'; Expected = @() }
+    @{ Case = 'the date part of DATEADD'; Sql = 'SELECT [a] = DATEADD(day, 1, Nope) FROM dbo.Person'; Expected = @('OMD031:Nope') }
+    @{ Case = 'the date part of DATEDIFF'; Sql = 'SELECT [a] = DATEDIFF(month, Deleted, Deleted) FROM dbo.Person'; Expected = @() }
+    @{ Case = 'a column named like a date part outside a date function'; Sql = 'SELECT [a] = ISNULL(day, 1) FROM dbo.Person'; Expected = @('OMD031:day') }
+    @{ Case = 'a wildcard'; Sql = 'SELECT * FROM dbo.Person AS p JOIN dbo.Contract AS c ON c.PersonId = p.Id'; Expected = @() }
+    @{ Case = 'a qualified wildcard'; Sql = 'SELECT p.* FROM dbo.Person AS p'; Expected = @() }
+    @{ Case = 'an unknown qualifier'; Sql = 'SELECT [a] = x.Nope FROM dbo.Person AS p'; Expected = @() }
+    @{ Case = 'a table name as qualifier'; Sql = 'SELECT [a] = Person.Nope FROM dbo.Person'; Expected = @('OMD031:Person.Nope') }
+    @{ Case = 'a parenthesised join'; Sql = 'SELECT [a] = c.Nope FROM (dbo.Person AS p JOIN dbo.Contract AS c ON c.PersonId = p.Id)'; Expected = @('OMD031:c.Nope') }
+    @{ Case = 'a cross join'; Sql = 'SELECT [a] = c.Nope FROM dbo.Person AS p CROSS JOIN dbo.Contract AS c'; Expected = @('OMD031:c.Nope') }
+    @{ Case = 'a derived table beside a known table'; Sql = 'SELECT [a] = p.Id FROM dbo.Person AS p JOIN (SELECT [x] = Nope FROM dbo.Contract) AS d ON d.x = p.Id'; Expected = @('OMD031:Nope') }
+    @{ Case = 'an outer source used inside CROSS APPLY'; Sql = 'SELECT [a] = 1 FROM dbo.Person AS p CROSS APPLY (SELECT [x] = c.Amount FROM dbo.Contract AS c WHERE c.PersonId = p.Id AND DisplayName = 1) AS d'; Expected = @() }
+    @{ Case = 'an unknown column inside CROSS APPLY'; Sql = 'SELECT [a] = 1 FROM dbo.Person AS p CROSS APPLY (SELECT [x] = c.Nope FROM dbo.Contract AS c WHERE c.PersonId = p.Id) AS d'; Expected = @('OMD031:c.Nope') }
+    @{ Case = 'a join with a table function'; Sql = 'SELECT [a] = Nope FROM dbo.Person AS p CROSS APPLY OPENJSON(p.DisplayName) AS j'; Expected = @() }
+    @{ Case = 'an unknown and a known table'; Sql = 'SELECT [a] = Nope FROM dbo.Person AS p JOIN dbo.Nope AS n ON n.Id = p.Id'; Expected = @('OMD030:dbo.Nope') }
+    @{ Case = 'a SELECT INTO target used later'; Sql = 'SELECT [a] = 1 INTO Staging FROM dbo.Person; SELECT [b] = 1 FROM Staging'; Expected = @() }
+    @{ Case = 'a SELECT INTO target with a schema'; Sql = 'SELECT [a] = 1 INTO Staging FROM dbo.Person; SELECT [b] = 1 FROM dbo.Staging'; Expected = @('OMD030:dbo.Staging') }
+    @{ Case = 'a UNION'; Sql = 'SELECT [a] = Nope FROM dbo.Person UNION ALL SELECT [a] = Amount FROM dbo.Contract'; Expected = @('OMD031:Nope') }
+    @{ Case = 'two findings in order'; Sql = "SELECT [a] = p.Nope, [b] = Missing`nFROM dbo.Person AS p"; Expected = @('OMD031:p.Nope', 'OMD031:Missing') }
+}

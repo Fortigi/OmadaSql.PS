@@ -138,7 +138,7 @@ function Resolve-OmadaSqlRuleSeverity {
     )
 
     $Severity = @{}
-    foreach ($Rule in @(Get-OmadaSqlRule)) {
+    foreach ($Rule in @(Get-OmadaSqlRule) + @(Get-OmadaSqlSchemaRule)) {
         $Severity[$Rule.Id] = $Rule.Severity
     }
     if ($null -eq $RuleSeverity) {
