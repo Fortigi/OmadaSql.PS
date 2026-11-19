@@ -94,7 +94,11 @@ Describe 'ConvertFrom-OmadaSqlHistoryRow parameter contract' -Tag 'Unit' {
     ) {
         $Contract = Get-OmadaSqlParameterContract -CommandName $Command -ParameterName $Parameter -ParameterSetName $ParameterSet
         $Contract.Mandatory | Should -Be $Mandatory
-        $Contract.Position | Should -Be $Position
+        # Only a declared position is part of the contract: without one PowerShell numbers the
+        # parameters of an advanced function in declaration order, which no mutant can change.
+        if ($null -ne $Position) {
+            $Contract.Position | Should -Be $Position
+        }
         $Contract.ValueFromPipeline | Should -Be $ValueFromPipeline
         $Contract.ValueFromPipelineByPropertyName | Should -Be $ValueFromPipelineByPropertyName
         $Contract.RangeMin | Should -Be $RangeMin
