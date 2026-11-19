@@ -58,15 +58,41 @@ function Get-OmadaSqlSchemaDiagnostic {
     }
     $ScriptName = Get-OmadaSqlScriptDefinedName -Statement $Statement
     foreach ($Target in @(Resolve-OmadaSqlStatementTarget -Context $Context -Statement $Statement -DataConnection $DataConnection)) {
-        if ($null -eq $Target.DataConnection) {
-            continue
+        if ($null -ne $Target.DataConnection) {
+            $Item = @($Statement | Where-Object { $_.Ordinal -eq $Target.Ordinal })[0]
+            Get-OmadaSqlStatementSchemaDiagnostic -Context $Context -Fragment $Item.Fragment -DataConnection $Target.DataConnection -ScriptName $ScriptName -Severity $Severity
         }
-        $Item = @($Statement | Where-Object { $_.Ordinal -eq $Target.Ordinal })[0]
-        $Model = Get-OmadaSqlSchemaModel -Context $Context -DataConnection $Target.DataConnection
-        foreach ($Hit in @(Find-OmadaSqlSchemaFinding -Fragment $Item.Fragment -Model $Model -ScriptName $ScriptName)) {
-            if ($Severity[$Hit.RuleId] -ne 'Off') {
-                New-OmadaSqlDiagnostic -RuleId $Hit.RuleId -Severity $Severity[$Hit.RuleId] -Line $Hit.Fragment.StartLine -Column $Hit.Fragment.StartColumn -Message $Hit.Message -Source 'Schema'
-            }
+    }
+}
+
+function Get-OmadaSqlStatementSchemaDiagnostic {
+    <#
+    .SYNOPSIS
+    The schema diagnostics of one statement against its data connection's schema, without the rules that are Off.
+    #>
+    [CmdletBinding()]
+    [OutputType('OmadaSql.Diagnostic')]
+    param(
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Context,
+
+        [Parameter(Mandatory = $true)]
+        [object]$Fragment,
+
+        [Parameter(Mandatory = $true)]
+        [object]$DataConnection,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$ScriptName,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Severity
+    )
+
+    $Model = Get-OmadaSqlSchemaModel -Context $Context -DataConnection $DataConnection
+    foreach ($Hit in @(Find-OmadaSqlSchemaFinding -Fragment $Fragment -Model $Model -ScriptName $ScriptName)) {
+        if ($Severity[$Hit.RuleId] -ne 'Off') {
+            New-OmadaSqlDiagnostic -RuleId $Hit.RuleId -Severity $Severity[$Hit.RuleId] -Line $Hit.Fragment.StartLine -Column $Hit.Fragment.StartColumn -Message $Hit.Message -Source 'Schema'
         }
     }
 }
@@ -192,7 +218,7 @@ function Test-OmadaSqlUnqualifiedColumn {
         return $null
     }
     foreach ($Level in $Scope.Level) {
-        $Owner = @($Level | Where-Object { -not $_.Opaque -and $Model.Column[$_.Entry.Name].ContainsKey($Name) })
+        $Owner = @(Get-OmadaSqlColumnOwner -Level $Level -Model $Model -Name $Name)
         if ($Owner.Count -gt 1) {
             return @{ RuleId = 'OMD032'; Text = ("Column '{0}' is ambiguous: {1} tables in this query have a column with that name ({2}). Qualify it with a table name or alias." -f $Name, $Owner.Count, (($Owner | ForEach-Object { $_.Name }) -join ', ')) }
         }
@@ -201,6 +227,28 @@ function Test-OmadaSqlUnqualifiedColumn {
         }
     }
     return @{ RuleId = 'OMD031'; Text = ("Column '{0}' is not on any table of this query in the schema of data connection '{1}'. Check the name, or read the schema again with Get-OmadaSqlSchema -Force if the database changed." -f $Name, $Model.DataConnection.Name) }
+}
+
+function Get-OmadaSqlColumnOwner {
+    <#
+    .SYNOPSIS
+    The sources of one scope level whose table has the column, opaque sources left out.
+    #>
+    [CmdletBinding()]
+    [OutputType([pscustomobject])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [object[]]$Level,
+
+        [Parameter(Mandatory = $true)]
+        [hashtable]$Model,
+
+        [Parameter(Mandatory = $true)]
+        [string]$Name
+    )
+
+    $Level | Where-Object { -not $_.Opaque -and $Model.Column[$_.Entry.Name].ContainsKey($Name) }
 }
 
 function Test-OmadaSqlQualifiedColumn {
