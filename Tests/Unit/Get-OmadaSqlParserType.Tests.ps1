@@ -33,6 +33,12 @@ namespace OmadaSqlPSParserTests
         }
     }
 
+    It 'Returns the only parser when there is one' {
+        InModuleScope 'OmadaSql.PS' {
+            (Select-OmadaSqlNewestParserType -Type @([OmadaSqlPSParserTests.TSql90Parser], [OmadaSqlPSParserTests.Unrelated])).Name | Should -Be 'TSql90Parser'
+        }
+    }
+
     It 'Returns $null when there is no parser among the types' {
         InModuleScope 'OmadaSql.PS' {
             Select-OmadaSqlNewestParserType -Type @([OmadaSqlPSParserTests.Unrelated]) | Should -BeNullOrEmpty

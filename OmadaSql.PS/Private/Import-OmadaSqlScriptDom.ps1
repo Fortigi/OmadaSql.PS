@@ -45,8 +45,12 @@ function Get-OmadaSqlLoadedScriptDom {
     [OutputType([System.Reflection.Assembly])]
     param()
 
-    # Select-Object rather than [0]: indexing an empty array throws under StrictMode.
-    return [System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object { $_.GetName().Name -eq 'Microsoft.SqlServer.TransactSql.ScriptDom' } | Select-Object -First 1
+    foreach ($Assembly in [System.AppDomain]::CurrentDomain.GetAssemblies()) {
+        if ($Assembly.GetName().Name -eq 'Microsoft.SqlServer.TransactSql.ScriptDom') {
+            return $Assembly
+        }
+    }
+    return $null
 }
 
 function Get-OmadaSqlScriptDomPath {

@@ -41,7 +41,7 @@ function Get-OmadaSqlFragmentDescendant {
             }
         }
     }
-    if ($null -eq $TypeName -or $TypeName.Count -eq 0) {
+    if (-not $TypeName) {
         return $Result.ToArray()
     }
     return @($Result | Where-Object { $TypeName -contains $_.GetType().Name })

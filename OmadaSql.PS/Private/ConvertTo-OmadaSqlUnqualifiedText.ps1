@@ -26,7 +26,7 @@ function ConvertTo-OmadaSqlUnqualifiedText {
     }
     $Span = [System.Collections.Generic.List[object]]::new()
     foreach ($Name in @(Get-OmadaSqlFragmentDescendant -Fragment $Statement.Fragment -TypeName 'SchemaObjectName' -IncludeSelf)) {
-        if ($null -eq $Name.DatabaseIdentifier -or $Name.DatabaseIdentifier.Value -eq '') {
+        if ($null -eq $Name.DatabaseIdentifier) {
             continue
         }
         $End = $Name.BaseIdentifier.StartOffset

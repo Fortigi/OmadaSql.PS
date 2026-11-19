@@ -25,7 +25,7 @@ function Get-OmadaSqlDatabaseReference {
         if ($null -ne $Name.ServerIdentifier) {
             $FourPartName = $true
         }
-        if ($null -ne $Name.DatabaseIdentifier -and $Name.DatabaseIdentifier.Value -ne '' -and $Seen.Add($Name.DatabaseIdentifier.Value)) {
+        if ($null -ne $Name.DatabaseIdentifier -and $Seen.Add($Name.DatabaseIdentifier.Value)) {
             $Database.Add($Name.DatabaseIdentifier.Value)
         }
     }

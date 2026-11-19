@@ -25,6 +25,7 @@ Describe 'Get-OmadaSqlDatabaseReference' -Tag 'Unit' {
             param($Fragment, $Database, $Use, $FourPart)
             $Reference = Get-OmadaSqlDatabaseReference -Statement $Fragment
             (@($Reference.Database) -join ',') | Should -BeExactly (@($Database) -join ',')
+            @($Reference.Database).Count | Should -Be @($Database).Count
             $Reference.UseDatabase | Should -Be $Use
             $Reference.FourPartName | Should -Be $FourPart
         }

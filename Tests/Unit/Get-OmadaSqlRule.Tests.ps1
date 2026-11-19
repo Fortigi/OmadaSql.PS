@@ -21,7 +21,7 @@ Describe 'Get-OmadaSqlRule' -Tag 'Unit' {
     It 'Declares every rule with its default severity' {
         InModuleScope 'OmadaSql.PS' {
             (@(Get-OmadaSqlRule | ForEach-Object { '{0}={1}' -f $_.Id, $_.Severity }) -join ',') | Should -Be 'OMD001=Warning,OMD003=Info,OMD004=Error,OMD010=Error,OMD011=Error,OMD012=Error,OMD013=Error,OMD020=Error,OMD021=Error'
-            @(Get-OmadaSqlRule | Where-Object { [string]::IsNullOrWhiteSpace($_.Title) -or $_.Find -isnot [scriptblock] }).Count | Should -Be 0
+            @(Get-OmadaSqlRule | Where-Object { [string]::IsNullOrWhiteSpace($_.Title) -or $null -eq (Get-Command -Name $_.Find -CommandType Function -ErrorAction SilentlyContinue) }).Count | Should -Be 0
         }
     }
 
@@ -109,10 +109,20 @@ Describe 'Get-OmadaSqlSuggestedColumnAlias' -Tag 'Unit' {
     }
 }
 
+
 Describe 'Get-OmadaSqlRule parameter contract' -Tag 'Unit' {
     # Parameter declarations run no code a test could observe, so the mutation gate's mutants of
     # Mandatory, Position, pipeline binding and ValidateRange are caught only by asserting the contract.
     It '<Command> -<Parameter> <ParameterSet>' -ForEach @(
+        @{ Command = 'Find-OmadaSqlNamelessResultColumn'; Parameter = 'Context'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Find-OmadaSqlRenamedAlias'; Parameter = 'Context'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Find-OmadaSqlNamelessScopedColumn'; Parameter = 'Context'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Find-OmadaSqlDataManipulation'; Parameter = 'Context'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Find-OmadaSqlDataDefinition'; Parameter = 'Context'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Find-OmadaSqlExecute'; Parameter = 'Context'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Find-OmadaSqlTemporaryTable'; Parameter = 'Context'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Find-OmadaSqlFourPartName'; Parameter = 'Context'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Find-OmadaSqlCrossDatabase'; Parameter = 'Context'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
         @{ Command = 'Test-OmadaSqlSelectElementNameless'; Parameter = 'SelectElement'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
         @{ Command = 'Get-OmadaSqlSuggestedColumnAlias'; Parameter = 'Expression'; ParameterSet = ''; Mandatory = $true; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
     ) {
