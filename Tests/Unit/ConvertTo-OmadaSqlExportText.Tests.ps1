@@ -70,12 +70,12 @@ Describe 'ConvertTo-OmadaSqlCsvText' -Tag 'Unit' {
 
     It 'Quotes every field, doubles inner quotes, keeps line breaks in a field and leaves null empty' {
         $Text = InModuleScope 'OmadaSql.PS' -Parameters @{ Rows = $Script:Rows } { param($Rows) ConvertTo-OmadaSqlCsvText -Row $Rows -Column @('Id', 'Name', 'Note') }
-        $Text | Should -BeExactly ("`"Id`",`"Name`",`"Note`"`r`n`"1`",`"He said `"`"hi`"`"`",`r`n`"2`",`"Two`r`nlines`",`"`"")
+        $Text | Should -BeExactly ("`"Id`";`"Name`";`"Note`"`r`n`"1`";`"He said `"`"hi`"`"`";`r`n`"2`";`"Two`r`nlines`";`"`"")
     }
 
     It 'Uses the Delimiter option and leaves the header out with NoHeader' {
-        $Text = InModuleScope 'OmadaSql.PS' -Parameters @{ Rows = $Script:Rows } { param($Rows) ConvertTo-OmadaSqlCsvText -Row @($Rows[0]) -Column @('Id', 'Note') -Option @{ Delimiter = ';'; NoHeader = $true } }
-        $Text | Should -BeExactly '"1";'
+        $Text = InModuleScope 'OmadaSql.PS' -Parameters @{ Rows = $Script:Rows } { param($Rows) ConvertTo-OmadaSqlCsvText -Row @($Rows[0]) -Column @('Id', 'Note') -Option @{ Delimiter = ','; NoHeader = $true } }
+        $Text | Should -BeExactly '"1",'
     }
 
     It 'Writes the header for a result with columns but no rows, and nothing without columns' {

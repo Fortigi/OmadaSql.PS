@@ -10,7 +10,7 @@ function Export-OmadaSqlResult {
 
     The built-in formats (see Get-OmadaSqlExportFormat for the details of each):
 
-      Csv              RFC 4180, every field quoted, comma by default (Option Delimiter, NoHeader)
+      Csv              every field quoted, semicolon by default (Option Delimiter, NoHeader)
       Json             an array of objects (Option Compress)
       Xml              <Result><Row><Field Name="...">
       Text             a plain text table
@@ -32,7 +32,7 @@ function Export-OmadaSqlResult {
     The file to write. Without it the export is returned as a string.
 
     .PARAMETER Option
-    Options of the format, for example @{ Delimiter = ';' } for Csv. An option the format does not
+    Options of the format, for example @{ Delimiter = ',' } for Csv. An option the format does not
     know is an error.
 
     .PARAMETER Encoding
@@ -56,10 +56,9 @@ function Export-OmadaSqlResult {
     Returns the ids as a T-SQL list, ready to paste after IN.
 
     .EXAMPLE
-    Get-OmadaSqlQuery -Name 'Daily export' | Invoke-OmadaSqlQuery | Export-OmadaSqlResult -Path .\daily.csv -Option @{ Delimiter = ';' } -Encoding UTF8BOM -Force
+    Get-OmadaSqlQuery -Name 'Daily export' | Invoke-OmadaSqlQuery | Export-OmadaSqlResult -Path .\daily.csv -Option @{ Delimiter = ',' } -Encoding UTF8BOM -Force
 
-    Writes a semicolon-separated file with a byte order mark, as Excel with Dutch regional settings
-    opens it.
+    Writes a comma-separated file with a byte order mark, for a tool that expects commas.
 
     .LINK
     Get-OmadaSqlExportFormat

@@ -16,7 +16,7 @@ Describe 'Export-OmadaSqlResult' -Tag 'Unit' {
     }
 
     It 'Returns CSV text for piped rows without -Format or -Path' {
-        $Script:Rows | Export-OmadaSqlResult | Should -BeExactly "`"Id`",`"Name`"`r`n`"1`",`"a`"`r`n`"2`",`"b`""
+        $Script:Rows | Export-OmadaSqlResult | Should -BeExactly "`"Id`";`"Name`"`r`n`"1`";`"a`"`r`n`"2`";`"b`""
     }
 
     It 'Takes rows from -InputObject as one value' {
@@ -24,7 +24,7 @@ Describe 'Export-OmadaSqlResult' -Tag 'Unit' {
     }
 
     It 'Takes the format as the first positional parameter and passes the options' {
-        $Script:Rows | Export-OmadaSqlResult Csv -Option @{ Delimiter = ';'; NoHeader = $true } | Should -BeExactly "`"1`";`"a`"`r`n`"2`";`"b`""
+        $Script:Rows | Export-OmadaSqlResult Csv -Option @{ Delimiter = ','; NoHeader = $true } | Should -BeExactly "`"1`",`"a`"`r`n`"2`",`"b`""
     }
 
     It 'Skips null input' {
@@ -77,7 +77,7 @@ Describe 'Export-OmadaSqlResult' -Tag 'Unit' {
         Set-Content -LiteralPath $Path -Value 'old'
         { $Script:Rows | Export-OmadaSqlResult -Path $Path } | Should -Throw -ErrorId 'OmadaSql.InvalidArgument,Export-OmadaSqlResult'
         $Script:Rows | Export-OmadaSqlResult -Path $Path -Force
-        (Get-Content -LiteralPath $Path -First 1) | Should -Be '"Id","Name"'
+        (Get-Content -LiteralPath $Path -First 1) | Should -Be '"Id";"Name"'
     }
 
     It 'Writes nothing with -WhatIf' {

@@ -77,7 +77,9 @@ function Get-OmadaSqlExportCell {
 function ConvertTo-OmadaSqlCsvText {
     <#
     .SYNOPSIS
-    RFC 4180 CSV: every field quoted, a null value as an empty unquoted field, CRLF between lines.
+    CSV as RFC 4180 describes it, but separated by semicolons by default (as OmadaSqlTroubleshooter and
+    Excel with many European regional settings expect): every field quoted, a null value as an empty
+    unquoted field, CRLF between lines.
     #>
     [CmdletBinding()]
     [OutputType([string])]
@@ -114,7 +116,7 @@ function ConvertTo-OmadaSqlCsvText {
 function Get-OmadaSqlCsvDelimiter {
     <#
     .SYNOPSIS
-    The Delimiter option: one character that is not a quote or a line break; a comma by default.
+    The Delimiter option: one character that is not a quote or a line break; a semicolon by default.
     #>
     [CmdletBinding()]
     [OutputType([string])]
@@ -124,7 +126,7 @@ function Get-OmadaSqlCsvDelimiter {
     )
 
     if (-not $Option.ContainsKey('Delimiter')) {
-        return ','
+        return ';'
     }
     $Delimiter = [string]$Option['Delimiter']
     if ($Delimiter.Length -ne 1 -or $Delimiter -in '"', "`r", "`n") {
