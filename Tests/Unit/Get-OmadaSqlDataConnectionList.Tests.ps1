@@ -89,3 +89,43 @@ Describe 'Resolve-OmadaSqlDataConnection' -Tag 'Unit' {
         }
     }
 }
+
+Describe 'Get-OmadaSqlDataConnectionList view and row selection' -Tag 'Unit' {
+    BeforeAll {
+        $Script:Connection = Initialize-OmadaSqlTestConnection
+    }
+
+    BeforeEach {
+        Mock Invoke-OmadaSqlRequest -ModuleName 'OmadaSql.PS' { '<option value="1001" data-uid="u">OISES</option>' }
+    }
+
+    It 'Uses only the first view named SQL Troubleshooting and asks for a writable, uncounted list' {
+        Mock Invoke-OmadaSqlPagingRequest -ModuleName 'OmadaSql.PS' -ParameterFilter { $DataType -eq 'Views' } {
+            [pscustomobject]@{ Rows = @([pscustomobject]@{ Name = 'SQL Troubleshooting'; Id = 77 }, [pscustomobject]@{ Name = 'SQL Troubleshooting'; Id = 78 }) }
+        }
+        Mock Invoke-OmadaSqlPagingRequest -ModuleName 'OmadaSql.PS' -ParameterFilter { $DataType -eq 'DataObjects' } { [pscustomobject]@{ Rows = @([pscustomobject]@{ 'c-13' = 555 }) } }
+
+        InModuleScope 'OmadaSql.PS' {
+            $null = Get-OmadaSqlDataConnectionList -Context (Get-OmadaSqlConnectionContext)
+        }
+        Should -Invoke Invoke-OmadaSqlPagingRequest -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter {
+            $DataType -eq 'DataObjects' -and
+            $DataTypeArgument.viewId -eq '77' -and
+            $DataTypeArgument.pageQueryString -eq 'https://tenant.omada.cloud/dataobjlst.aspx?view=77' -and
+            $DataTypeArgument.readOnlyMode -is [bool] -and $DataTypeArgument.readOnlyMode -eq $false -and
+            $DataTypeArgument.countRows -is [bool] -and $DataTypeArgument.countRows -eq $false
+        }
+    }
+
+    It 'Skips rows without the object id column and opens only the first row that has one' {
+        Mock Invoke-OmadaSqlPagingRequest -ModuleName 'OmadaSql.PS' -ParameterFilter { $DataType -eq 'Views' } { [pscustomobject]@{ Rows = @([pscustomobject]@{ Name = 'SQL Troubleshooting'; Id = 77 }) } }
+        Mock Invoke-OmadaSqlPagingRequest -ModuleName 'OmadaSql.PS' -ParameterFilter { $DataType -eq 'DataObjects' } {
+            [pscustomobject]@{ Rows = @([pscustomobject]@{ 'c-1' = 'no id' }, [pscustomobject]@{ 'c-13' = 555 }, [pscustomobject]@{ 'c-13' = 556 }) }
+        }
+
+        InModuleScope 'OmadaSql.PS' {
+            $null = Get-OmadaSqlDataConnectionList -Context (Get-OmadaSqlConnectionContext)
+        }
+        Should -Invoke Invoke-OmadaSqlRequest -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { $Path -eq 'dataobjdlg.aspx?DOID=555' }
+    }
+}

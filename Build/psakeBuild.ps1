@@ -433,7 +433,7 @@ Task QualityChanged -precondition { $PSVersionTable.PSVersion -ge [version]'7.4'
         $Markdown.Add(('`complexity-baseline.json` names files that no longer exist: {0}. Run `./Build/build.ps1 -Task UpdateComplexityBaseline` and commit the result.' -f (($Orphaned | ForEach-Object { '`{0}`' -f $_.file } | Sort-Object -Unique) -join ', ')))
     }
     $Markdown.Add('')
-    $Markdown.Add(('## {0} Mutation testing' -f $(if ($Mutation.Skipped) { 'SKIPPED' } elseif ($Mutation.Passed) { 'PASS' } else { 'FAIL' })))
+    $Markdown.Add(('## {0} Mutation testing' -f $(if (-not $Mutation.Passed) { 'FAIL' } elseif ($Mutation.Skipped) { 'SKIPPED' } else { 'PASS' })))
     $Markdown.Add('')
     $Markdown.Add($Mutation.Markdown)
     if ($Mutation.Untested.Count -gt 0) {

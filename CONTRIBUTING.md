@@ -63,13 +63,14 @@ it is out of date.
 
 ## Complexity and mutation gates
 
-Two more gates judge the code rather than the tests' pass/fail result. Both need PowerShell 7.4 and
-read their policy from `Build/QualityGates.psd1`.
+Two more gates judge the code rather than the tests' pass/fail result. Both are requirements: a
+pull request is not merged while either fails. Both need PowerShell 7.4 and read their policy from
+`Build/QualityGates.psd1`.
 
 | Gate | Tool | Bar |
 |---|---|---|
 | Complexity | [PSComplexity](https://github.com/Fortigi/PSComplexity) | Every function at or under 15 cyclomatic and 15 cognitive. Functions over that are recorded in `complexity-baseline.json` and may not get worse. The baseline starts empty. |
-| Mutation | [PSMutant](https://github.com/Fortigi/PSMutant) | Small faults injected into the source (`-eq` to `-ne`, `$true` to `$false`, a dropped `-not`) must make a test fail. The score must stay at or above `Thresholds.Break`. |
+| Mutation | [PSMutant](https://github.com/Fortigi/PSMutant) | Small faults injected into the source (`-eq` to `-ne`, `$true` to `$false`, a dropped `-not`) must make a test fail. The score over all mutated files must stay at or above `Thresholds.Break`, and every single file with mutants at or above `Thresholds.FileBreak`, so a weakly tested file cannot hide behind well-tested ones. Changed source without an owning `Tests/Unit/<FunctionName>.Tests.ps1` fails the gate (`RequireOwningTest`). A mutant no test can tell apart from the original is declared in `Equivalents` with the reason, never left to lower the score. |
 
 On a pull request both run on **the files the pull request changed only**, after the tests, on the
 pwsh leg of `/validate`, and report as the `Quality gates (changed code)` check. Every week both

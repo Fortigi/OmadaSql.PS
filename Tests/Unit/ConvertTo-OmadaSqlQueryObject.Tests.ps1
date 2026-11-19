@@ -81,3 +81,13 @@ Describe 'Get-OmadaSqlPropertyValue' -Tag 'Unit' {
         }
     }
 }
+
+Describe 'ConvertTo-OmadaSqlQueryObject data connection id' -Tag 'Unit' {
+    It 'Reports no data connection id for an empty reference id' {
+        $Raw = [pscustomobject]@{ Id = 1; NAME = 'Q'; C_SQLTROUBLESHOOTING_DATACONNECTION = [pscustomobject]@{ Id = '' } }
+        InModuleScope 'OmadaSql.PS' -Parameters @{ Raw = $Raw } {
+            param($Raw)
+            (ConvertTo-OmadaSqlQueryObject -InputObject $Raw -BaseUrl 'https://tenant.omada.cloud').DataConnectionId | Should -BeNullOrEmpty
+        }
+    }
+}

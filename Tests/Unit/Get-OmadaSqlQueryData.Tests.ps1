@@ -66,3 +66,26 @@ Describe 'Get-OmadaSqlQueryData' -Tag 'Unit' {
         }
     }
 }
+
+Describe 'Get-OmadaSqlQueryData boundaries' -Tag 'Unit' {
+    BeforeAll {
+        $Script:Connection = Initialize-OmadaSqlTestConnection
+    }
+
+    It 'Reads object id 1 by id, as every positive id is a single read' {
+        Mock Invoke-OmadaSqlRequest -ModuleName 'OmadaSql.PS' { New-OmadaSqlTestODataQuery -Id 1 }
+        InModuleScope 'OmadaSql.PS' {
+            $null = Get-OmadaSqlQueryData -Context (Get-OmadaSqlConnectionContext) -Id 1
+        }
+        Should -Invoke Invoke-OmadaSqlRequest -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { $Path -eq 'odata/dataobjects/C_P_SQLTROUBLESHOOTING(1)' }
+    }
+
+    It 'Returns what the OData name filter returned without filtering it again locally' {
+        # The OData filter is authoritative for a name without wildcards: the server's comparison
+        # rules apply, not PowerShell's -like.
+        Mock Invoke-OmadaSqlRequest -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ value = @(New-OmadaSqlTestODataQuery -Id 1 -Name 'Daily export (server match)') } }
+        InModuleScope 'OmadaSql.PS' {
+            @(Get-OmadaSqlQueryData -Context (Get-OmadaSqlConnectionContext) -Name 'Daily export').Count | Should -Be 1
+        }
+    }
+}

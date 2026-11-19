@@ -303,3 +303,52 @@ Describe 'Format-MutationSurvivorMarkdown' {
         Format-MutationSurvivorMarkdown -Survivor @() | Should -Be '_No surviving mutants._'
     }
 }
+
+Describe 'Get-MutationFileViolation' {
+    It 'returns every file under the per-file floor, lowest score first' {
+        $Violation = @(Get-MutationFileViolation -Floor 75 -PerFile @(
+                [pscustomobject]@{ file = 'src/good.ps1'; score = 90; survived = 1; total = 10 }
+                [pscustomobject]@{ file = 'src/weak.ps1'; score = 74.9; survived = 5; total = 20 }
+                [pscustomobject]@{ file = 'src/worst.ps1'; score = 42.9; survived = 4; total = 7 }
+            ))
+        $Violation.file | Should -Be @('src/worst.ps1', 'src/weak.ps1')
+    }
+
+    It 'accepts a file exactly at the floor' {
+        @(Get-MutationFileViolation -Floor 75 -PerFile @(
+                [pscustomobject]@{ file = 'src/edge.ps1'; score = 75; survived = 1; total = 4 }
+            )).Count | Should -Be 0
+    }
+
+    It 'ignores a file without mutants, whose score means nothing' {
+        @(Get-MutationFileViolation -Floor 75 -PerFile @(
+                [pscustomobject]@{ file = 'src/empty.ps1'; score = 0; survived = 0; total = 0 }
+            )).Count | Should -Be 0
+    }
+
+    It 'returns nothing for an empty report' {
+        @(Get-MutationFileViolation -Floor 75 -PerFile @()).Count | Should -Be 0
+    }
+}
+
+Describe 'Get-MutationGateVerdict' {
+    It 'passes when PSMutant passes, no file is under the floor and every changed file has a test' {
+        Get-MutationGateVerdict -ExitCode 0 -FileViolation @() -Untested @() -RequireOwningTest $true | Should -BeTrue
+    }
+
+    It 'fails when PSMutant fails the aggregate threshold' {
+        Get-MutationGateVerdict -ExitCode 1 -FileViolation @() -Untested @() -RequireOwningTest $true | Should -BeFalse
+    }
+
+    It 'fails when one file is under the floor although the aggregate passes' {
+        Get-MutationGateVerdict -ExitCode 0 -FileViolation @([pscustomobject]@{ file = 'a.ps1' }) -Untested @() -RequireOwningTest $true | Should -BeFalse
+    }
+
+    It 'fails on changed source without an owning test when owning tests are required' {
+        Get-MutationGateVerdict -ExitCode 0 -FileViolation @() -Untested @('src/a.ps1') -RequireOwningTest $true | Should -BeFalse
+    }
+
+    It 'only reports changed source without an owning test when owning tests are not required' {
+        Get-MutationGateVerdict -ExitCode 0 -FileViolation @() -Untested @('src/a.ps1') -RequireOwningTest $false | Should -BeTrue
+    }
+}

@@ -47,6 +47,46 @@ Describe 'Invoke-OmadaSqlRequest' -Tag 'Unit' {
         }
     }
 
+    It 'Serializes a body nested far deeper than any Omada request without truncating it' {
+        Mock Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' { $null }
+        InModuleScope 'OmadaSql.PS' -Parameters @{ Context = $Script:Context } {
+            param($Context)
+            $Body = @{ leaf = 'deep' }
+            foreach ($Level in 1..40) {
+                $Body = @{ n = $Body }
+            }
+            $null = Invoke-OmadaSqlRequest -Context $Context -Method POST -Path 'webservice/x.asmx/Y' -Body $Body
+        }
+        Should -Invoke Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter {
+            ([System.Text.Encoding]::UTF8.GetString($Body)) -like '*"leaf":"deep"*'
+        }
+    }
+
+    It 'Asks OmadaWeb.PS to follow paging for <Case>' -ForEach @(
+        @{ Case = 'a paged GET when OmadaWeb.PS supports it'; Method = 'GET'; Paged = $true; Supported = $true; Expected = $true }
+        @{ Case = 'no GET that was not asked to page'; Method = 'GET'; Paged = $false; Supported = $true; Expected = $false }
+        @{ Case = 'no paged write'; Method = 'POST'; Paged = $true; Supported = $true; Expected = $false }
+        @{ Case = 'no paged GET when OmadaWeb.PS lacks -Paged'; Method = 'GET'; Paged = $true; Supported = $false; Expected = $false }
+    ) {
+        Mock Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' { $null }
+        if ($Supported) {
+            Mock Test-OmadaSqlRestMethodParameter -ModuleName 'OmadaSql.PS' { $true }
+        }
+        else {
+            Mock Test-OmadaSqlRestMethodParameter -ModuleName 'OmadaSql.PS' { $false }
+        }
+        InModuleScope 'OmadaSql.PS' -Parameters @{ Context = $Script:Context; Method = $Method; Paged = $Paged } {
+            param($Context, $Method, $Paged)
+            $null = Invoke-OmadaSqlRequest -Context $Context -Method $Method -Path 'odata/x' -Paged:$Paged
+        }
+        if ($Expected) {
+            Should -Invoke Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { $Paged -eq $true }
+        }
+        else {
+            Should -Invoke Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { -not $Paged }
+        }
+    }
+
     It 'Sends a string body exactly as given' {
         Mock Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' { $null }
         InModuleScope 'OmadaSql.PS' -Parameters @{ Context = $Script:Context } {

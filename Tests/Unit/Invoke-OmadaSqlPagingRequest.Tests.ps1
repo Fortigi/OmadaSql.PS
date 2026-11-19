@@ -24,6 +24,17 @@ Describe 'New-OmadaSqlPagingRequestBody' -Tag 'Unit' {
         }
     }
 
+    It 'Sends the current time in Unix milliseconds as nd, as the UI''s jqGrid does' {
+        InModuleScope 'OmadaSql.PS' {
+            $Before = [System.DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+            $Body = New-OmadaSqlPagingRequestBody -DataType 'Views' -DataTypeArgument @{}
+            $After = [System.DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+            $Body.nd | Should -BeOfType [long]
+            $Body.nd | Should -BeGreaterOrEqual $Before
+            $Body.nd | Should -BeLessOrEqual $After
+        }
+    }
+
     It 'Uses the sort field and order when there is no search' {
         InModuleScope 'OmadaSql.PS' {
             $Body = New-OmadaSqlPagingRequestBody -DataType 'DataObjectHistory' -DataTypeArgument @{} -Rows 100000 -SortField 'when' -SortOrder 'desc'

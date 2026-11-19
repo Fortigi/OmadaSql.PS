@@ -37,3 +37,19 @@ Describe 'Assert-OmadaSqlQueryNameAvailable' -Tag 'Unit' {
         }
     }
 }
+
+Describe 'Assert-OmadaSqlQueryNameAvailable error message' -Tag 'Unit' {
+    BeforeAll {
+        $Script:Connection = Initialize-OmadaSqlTestConnection
+    }
+
+    It 'Names the id of the object that holds the name' {
+        Mock Get-OmadaSqlQueryData -ModuleName 'OmadaSql.PS' { New-OmadaSqlTestODataQuery -Id 5 -Name 'Taken' }
+        InModuleScope 'OmadaSql.PS' {
+            $Caught = $null
+            try { Assert-OmadaSqlQueryNameAvailable -Context (Get-OmadaSqlConnectionContext) -Name 'Taken' } catch { $Caught = $_ }
+            $Caught | Should -Not -BeNullOrEmpty
+            $Caught.Exception.Message | Should -BeLike "*'Taken' already exists (id 5)*"
+        }
+    }
+}

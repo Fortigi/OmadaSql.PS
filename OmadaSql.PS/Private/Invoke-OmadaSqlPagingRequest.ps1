@@ -45,8 +45,8 @@ function New-OmadaSqlPagingRequestBody {
 
     .DESCRIPTION
     Field for field what the Omada web UI sends. A search sorts by name, as the UI does; otherwise
-    -SortField decides (the history uses 'when'). 'nd' is the jqGrid cache-busting timestamp the UI
-    sends; Omada does not use its value, and a constant keeps the body deterministic.
+    -SortField decides (the history uses 'when'). 'nd' is the jqGrid cache-busting value: the current
+    time in Unix milliseconds, as the UI's jqGrid sends it (new Date().getTime()).
     #>
     [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseShouldProcessForStateChangingFunctions', '', Justification = 'Builds an object in memory and changes no state.')]
     [CmdletBinding()]
@@ -78,7 +78,7 @@ function New-OmadaSqlPagingRequestBody {
 
     return [ordered]@{
         _search      = $false
-        nd           = 1732546553116
+        nd           = [System.DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
         rows         = $Rows
         page         = 1
         sidx         = $Sort

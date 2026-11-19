@@ -9,8 +9,9 @@ function Invoke-OmadaSqlRequest {
     failure into an OmadaSql.<Kind> error (see Resolve-OmadaSqlRequestError). Unit tests mock
     Invoke-OmadaRestMethod, so nothing below it is ever reached in a test.
 
-    A body that is not already a string is serialized with ConvertTo-Json -Depth 20 (the default
-    depth of 2 silently truncates nested bodies). Some ASMX methods want a body that was serialized
+    A body that is not already a string is serialized with ConvertTo-Json -Depth 100, the maximum
+    PowerShell 7 accepts: the default depth of 2, or any lower limit, silently truncates a nested
+    body instead of failing. Some ASMX methods want a body that was serialized
     separately; pass those as a string. Either way the JSON is sent as UTF-8 bytes: Windows
     PowerShell 5.1 encodes a string body as ISO-8859-1 whatever charset the content type names, which
     turns query text outside Latin-1 into question marks (found by the integration tests).
@@ -49,7 +50,7 @@ function Invoke-OmadaSqlRequest {
     if ($null -ne $Body) {
         $Json = $Body
         if ($Body -isnot [string]) {
-            $Json = ConvertTo-Json -InputObject $Body -Depth 20 -Compress
+            $Json = ConvertTo-Json -InputObject $Body -Depth 100 -Compress
         }
         $Parameters.Body = [System.Text.Encoding]::UTF8.GetBytes([string]$Json)
     }

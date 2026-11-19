@@ -74,6 +74,17 @@ Describe 'Build/QualityGates.psd1' {
         $Break | Should -BeLessOrEqual 100
     }
 
+    It 'sets a per-file mutation floor no lower than the aggregate break' {
+        $Floor = $Script:QualityGates.Mutation.Thresholds.FileBreak
+        $Floor | Should -Not -BeNullOrEmpty -Because 'without it one weak file hides behind a strong aggregate'
+        $Floor | Should -BeGreaterOrEqual $Script:QualityGates.Mutation.Thresholds.Break
+        $Floor | Should -BeLessOrEqual 100
+    }
+
+    It 'requires an owning unit test file for changed source' {
+        $Script:QualityGates.Mutation.RequireOwningTest | Should -BeTrue -Because 'source without a test cannot be mutation-tested'
+    }
+
     It 'gives every declared equivalent mutant a reason' {
         foreach ($Key in $Script:QualityGates.Mutation.Equivalents.Keys) {
             $Script:QualityGates.Mutation.Equivalents[$Key] | Should -Not -BeNullOrEmpty -Because "$Key is excluded from the score"

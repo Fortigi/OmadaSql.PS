@@ -70,3 +70,71 @@ Describe 'Get-OmadaSqlHistorySummary' -Tag 'Unit' {
         }
     }
 }
+
+Describe 'Add-OmadaSqlQueryDetail edge cases' -Tag 'Unit' {
+    BeforeAll {
+        $Script:Connection = Initialize-OmadaSqlTestConnection
+        Mock Get-OmadaSqlHistoryEntry -ModuleName 'OmadaSql.PS' { }
+        Mock Get-OmadaSqlDataConnection -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ Name = 'RENAMED'; Id = 1001 } }
+    }
+
+    It 'Keeps the data connection name OData returned and does not look the connections up' {
+        $Raw = New-OmadaSqlTestODataQuery -DataConnectionId 1001 -DataConnectionName 'OISES'
+        InModuleScope 'OmadaSql.PS' -Parameters @{ Raw = $Raw } {
+            param($Raw)
+            $Query = ConvertTo-OmadaSqlQueryObject -InputObject $Raw -BaseUrl 'https://tenant.omada.cloud'
+            (Add-OmadaSqlQueryDetail -Context (Get-OmadaSqlConnectionContext) -Query $Query).DataConnectionName | Should -Be 'OISES'
+        }
+        Should -Invoke Get-OmadaSqlDataConnection -ModuleName 'OmadaSql.PS' -Times 0 -Exactly
+    }
+
+    It 'Makes OmadaSql.QueryDetail the primary type name, so its format view applies' {
+        $Raw = New-OmadaSqlTestODataQuery
+        InModuleScope 'OmadaSql.PS' -Parameters @{ Raw = $Raw } {
+            param($Raw)
+            $Query = ConvertTo-OmadaSqlQueryObject -InputObject $Raw -BaseUrl 'https://tenant.omada.cloud'
+            $Result = Add-OmadaSqlQueryDetail -Context (Get-OmadaSqlConnectionContext) -Query $Query
+            $Result.PSObject.TypeNames[0] | Should -Be 'OmadaSql.QueryDetail'
+            $Result.PSObject.TypeNames[1] | Should -Be 'OmadaSql.Query'
+        }
+    }
+}
+
+Describe 'Get-OmadaSqlHistorySummary edge cases' -Tag 'Unit' {
+    It 'Uses a single dated entry as both the creation and the last change' {
+        InModuleScope 'OmadaSql.PS' {
+            $Summary = Get-OmadaSqlHistorySummary -History @([pscustomobject]@{ ChangedAt = [datetime]'2026-10-01'; ChangedBy = 'Alice'; ChangeType = 'Modified' })
+            $Summary.CreatedBy | Should -Be 'Alice'
+            $Summary.ChangedBy | Should -Be 'Alice'
+            $Summary.CreatedAt | Should -Be ([datetime]'2026-10-01')
+        }
+    }
+
+    It 'Takes only the oldest creation when the history holds more than one' {
+        $History = @(
+            [pscustomobject]@{ ChangedAt = [datetime]'2026-10-05'; ChangedBy = 'Dave'; ChangeType = 'Created' }
+            [pscustomobject]@{ ChangedAt = [datetime]'2026-10-01'; ChangedBy = 'Alice'; ChangeType = 'Created' }
+        )
+        InModuleScope 'OmadaSql.PS' -Parameters @{ History = $History } {
+            param($History)
+            $Summary = Get-OmadaSqlHistorySummary -History $History
+            $Summary.CreatedBy | Should -BeExactly 'Alice'
+            @($Summary.CreatedBy).Count | Should -Be 1
+            @($Summary.CreatedAt).Count | Should -Be 1
+        }
+    }
+}
+
+Describe 'Get-OmadaSqlReferenceName' -Tag 'Unit' {
+    It 'Skips an empty display name and uses the name' {
+        InModuleScope 'OmadaSql.PS' {
+            Get-OmadaSqlReferenceName -Reference ([pscustomobject]@{ DisplayName = ''; Name = 'Admins'; Id = 5 }) | Should -Be 'Admins'
+        }
+    }
+
+    It 'Falls back to the id when display name and name are missing' {
+        InModuleScope 'OmadaSql.PS' {
+            Get-OmadaSqlReferenceName -Reference ([pscustomobject]@{ Id = 5 }) | Should -Be '5'
+        }
+    }
+}

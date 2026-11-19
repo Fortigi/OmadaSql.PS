@@ -25,8 +25,13 @@
                          nothing.
       SandboxSubtrees  - what PSMutant copies into its sandbox.
       Workers          - mutants evaluated in parallel. 3 on the 4-vCPU windows-latest runner.
-      Thresholds       - High/Low colour the console score only. Break fails the gate below it.
-                         Raise Break as the score rises, never lower it to make a red run green.
+      Thresholds       - High/Low colour the console score only. Break fails the gate when the
+                         score over all mutated files is below it. FileBreak fails the gate when any
+                         single file with mutants scores below it, so one weakly tested file cannot
+                         hide behind a strong aggregate. Raise both as the score rises, never lower
+                         them to make a red run green.
+      RequireOwningTest - fail the PR lane when changed source has no owning unit test file
+                         (Tests/Unit/<FunctionName>.Tests.ps1): its test strength cannot be measured.
       Equivalents      - 'path:Function:original -> mutated' = 'why no test can tell the two apart'.
                          PSMutant fails the run if a declaration is ever killed or stops matching.
 #>
@@ -46,10 +51,12 @@
         SandboxSubtrees  = @('OmadaSql.PS', 'Tests', 'Build')
         Workers          = 3
         Thresholds       = @{
-            High  = 85
-            Low   = 75
-            Break = 75
+            High      = 85
+            Low       = 75
+            Break     = 75
+            FileBreak = 75
         }
+        RequireOwningTest = $true
         Equivalents      = @{}
     }
 }

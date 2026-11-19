@@ -489,6 +489,60 @@ function Invoke-ComplexityGate {
     }
 }
 
+function Get-MutationFileViolation {
+    <#
+    .SYNOPSIS
+        The files of a PSMutant report that score below the per-file floor, lowest score first.
+    .DESCRIPTION
+        PSMutant's break threshold applies to the score over every mutated file, so a file at 40%
+        passes next to files at 100%. This holds each file to a floor of its own. A file without
+        mutants has no meaningful score and is skipped.
+    #>
+    [CmdletBinding()]
+    [OutputType([pscustomobject])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [object[]]$PerFile,
+
+        [Parameter(Mandatory = $true)]
+        [double]$Floor
+    )
+
+    $PerFile |
+        Where-Object { $null -ne $_ -and [int]$_.total -gt 0 -and [double]$_.score -lt $Floor } |
+        Sort-Object -Property @{ Expression = { [double]$_.score } }, file
+}
+
+function Get-MutationGateVerdict {
+    <#
+    .SYNOPSIS
+        Whether the mutation gate passes: PSMutant's own verdict, the per-file floor and owning tests.
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory = $true)]
+        [int]$ExitCode,
+
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [object[]]$FileViolation,
+
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [string[]]$Untested,
+
+        [Parameter(Mandatory = $true)]
+        [bool]$RequireOwningTest
+    )
+
+    if ($ExitCode -ne 0 -or $FileViolation.Count -gt 0) {
+        return $false
+    }
+    return -not ($RequireOwningTest -and $Untested.Count -gt 0)
+}
+
 function Invoke-MutationGate {
     <#
     .SYNOPSIS
@@ -497,7 +551,8 @@ function Invoke-MutationGate {
         Generates the config from QualityGates.psd1 and the test naming convention, then runs it -
         scoped to -ChangedFile when given (the pull request lane), over every mapped file otherwise.
         Changed source with no owning test file is not in the map, so PSMutant would pass it without
-        a word; it is returned as Untested so the caller can put it in front of a reviewer.
+        a word; it is returned as Untested and fails the gate when Mutation.RequireOwningTest is set.
+        Every file is also held to Thresholds.FileBreak (see Get-MutationFileViolation).
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
@@ -528,9 +583,10 @@ function Invoke-MutationGate {
         $Untested = @($UnderMutation | Where-Object { -not $TestMap.Map.Contains($_) })
     }
 
+    $RequireOwningTest = [bool]$Setting.RequireOwningTest
     if ($Mutable.Count -eq 0) {
         return [pscustomobject]@{
-            Passed    = $true
+            Passed    = Get-MutationGateVerdict -ExitCode 0 -FileViolation @() -Untested $Untested -RequireOwningTest $RequireOwningTest
             Skipped   = $true
             Score     = $null
             Killed    = 0
@@ -551,9 +607,16 @@ function Invoke-MutationGate {
     $ReportFile = Join-Path -Path $OutputDirectory -ChildPath $(if ($Scoped) { 'mutation.changed.json' } else { 'mutation.json' })
     $Report = Get-Content -LiteralPath $ReportFile -Raw | ConvertFrom-Json
 
+    $FileBreak = if ($null -ne $Setting.Thresholds.FileBreak) { [double]$Setting.Thresholds.FileBreak } else { [double]$Setting.Thresholds.Break }
+    $FileViolation = @(Get-MutationFileViolation -PerFile @($Report.perFile | Where-Object { $_ }) -Floor $FileBreak)
+
     $Markdown = @(
-        '**Score {0}%** ({1} of {2} killed) - threshold {3}%.' -f $Result.Score, $Result.Killed, $Result.Total, $Setting.Thresholds.Break
+        '**Score {0}%** ({1} of {2} killed) - threshold {3}% overall, {4}% per file.' -f $Result.Score, $Result.Killed, $Result.Total, $Setting.Thresholds.Break, $FileBreak
     )
+    if ($FileViolation.Count -gt 0) {
+        $Markdown += ''
+        $Markdown += 'Under the per-file floor of {0}%: {1}' -f $FileBreak, (($FileViolation | ForEach-Object { '`{0}` ({1}%)' -f $_.file, $_.score }) -join ', ')
+    }
     if ($Result.FailureReason -and "$($Result.FailureReason)" -ne 'None') {
         $Markdown += ''
         $Markdown += 'PSMutant failure reason: `{0}`.' -f $Result.FailureReason
@@ -567,7 +630,7 @@ function Invoke-MutationGate {
     $Markdown += Format-MutationSurvivorMarkdown -Survivor @($Report.survivors) -PerFile @($Report.perFile)
 
     return [pscustomobject]@{
-        Passed    = ($Result.ExitCode -eq 0)
+        Passed    = Get-MutationGateVerdict -ExitCode $Result.ExitCode -FileViolation $FileViolation -Untested $Untested -RequireOwningTest $RequireOwningTest
         Skipped   = $false
         Score     = $Result.Score
         Killed    = $Result.Killed
