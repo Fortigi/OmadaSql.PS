@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Omada Documentation
+    url: https://documentation.omadaidentity.com/
+    about: General Omada Identity Cloud documentation (not specific to this module).
+  - name: OmadaWeb.PS module
+    url: https://github.com/Fortigi/OmadaWeb.PS
+    about: Sign-in and authentication problems usually belong to OmadaWeb.PS, which this module uses for every request.
+  - name: OmadaSqlTroubleshooter app
+    url: https://github.com/Fortigi/OmadaSqlTroubleshooter
+    about: Issues with the interactive SQL Troubleshooter app itself.
+  - name: Security vulnerability
+    url: https://github.com/Fortigi/OmadaSql.PS/security/advisories/new
+    about: Report security issues privately, never in a public issue.

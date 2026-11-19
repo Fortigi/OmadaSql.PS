@@ -1,0 +1,12 @@
+buildoutput/**
+staging/**
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.history/
+.vs
+**/test.ps1
+*.pfx
+*.cer
+# The bundled T-SQL parser is fetched and verified by the build (Build/Get-BundledDependency.ps1).
+OmadaSql.PS/lib/

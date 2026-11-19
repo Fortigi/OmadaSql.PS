@@ -1,0 +1,15 @@
+<!--
+    Not built. This project exists so Dependabot (nuget ecosystem) and the dependency graph know which
+    NuGet packages ship inside the module. The version here and the version in Build/DependencyLock.psd1
+    must agree; Tests/Unit/DependencyLock.Tests.ps1 fails when they do not. After Dependabot moves a
+    version here, run ./Build/Update-DependencyLock.ps1 to pin the new hashes.
+-->
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFrameworks>net472;net8.0</TargetFrameworks>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SqlServer.TransactSql.ScriptDom" Version="180.140.0" />
+  </ItemGroup>
+</Project>
