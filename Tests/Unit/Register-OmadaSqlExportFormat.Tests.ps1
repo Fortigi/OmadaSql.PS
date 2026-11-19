@@ -58,3 +58,23 @@ Describe 'Register-OmadaSqlExportFormat' -Tag 'Unit' {
         { Register-OmadaSqlExportFormat -Name 'Ok' -Extension $Extension -ScriptBlock { 'x' } } | Should -Throw
     }
 }
+
+Describe 'Register-OmadaSqlExportFormat parameter contract' -Tag 'Unit' {
+    # Parameter declarations run no code a test could observe, so the mutation gate's mutants of
+    # Mandatory, Position, pipeline binding and ValidateRange are caught only by asserting the contract.
+    It '<Command> -<Parameter> <ParameterSet>' -ForEach @(
+        @{ Command = 'Register-OmadaSqlExportFormat'; Parameter = 'Name'; ParameterSet = ''; Mandatory = $true; Position = 0; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Register-OmadaSqlExportFormat'; Parameter = 'ScriptBlock'; ParameterSet = ''; Mandatory = $true; Position = 1; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+        @{ Command = 'Register-OmadaSqlExportFormat'; Parameter = 'Extension'; ParameterSet = ''; Mandatory = $false; Position = $null; ValueFromPipeline = $false; ValueFromPipelineByPropertyName = $false; RangeMin = $null; RangeMax = $null }
+    ) {
+        $Contract = Get-OmadaSqlParameterContract -CommandName $Command -ParameterName $Parameter -ParameterSetName $ParameterSet
+        $Contract.Mandatory | Should -Be $Mandatory
+        if ($null -ne $Position) {
+            $Contract.Position | Should -Be $Position
+        }
+        $Contract.ValueFromPipeline | Should -Be $ValueFromPipeline
+        $Contract.ValueFromPipelineByPropertyName | Should -Be $ValueFromPipelineByPropertyName
+        $Contract.RangeMin | Should -Be $RangeMin
+        $Contract.RangeMax | Should -Be $RangeMax
+    }
+}
