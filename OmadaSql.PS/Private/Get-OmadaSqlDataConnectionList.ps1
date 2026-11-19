@@ -28,10 +28,11 @@ function Get-OmadaSqlDataConnectionList {
         countRows       = $false
     }
     $Rows = Invoke-OmadaSqlPagingRequest -Context $Context -DataType 'DataObjects' -DataTypeArgument $DataTypeArgument
-    $FirstRow = @($Rows.Rows | Where-Object { $null -ne $_ -and $null -ne $_.PSObject.Properties['c-13'] }) | Select-Object -First 1
-    if ($null -eq $FirstRow) {
+    $ObjectRows = @($Rows.Rows | Where-Object { $null -ne $_ -and $null -ne $_.PSObject.Properties['c-13'] })
+    if ($ObjectRows.Count -eq 0) {
         throw (New-OmadaSqlErrorRecord -Kind 'NotFound' -Message "The 'SQL Troubleshooting' view contains no SQL Troubleshooting object, so the data connections cannot be read. Create one in the Omada UI first.")
     }
+    $FirstRow = $ObjectRows[0]
 
     $Html = Invoke-OmadaSqlRequest -Context $Context -Method GET -Path ('dataobjdlg.aspx?DOID={0}' -f $FirstRow.'c-13')
     $Connections = @(ConvertFrom-OmadaSqlDataConnectionHtml -Html ([string]$Html))
