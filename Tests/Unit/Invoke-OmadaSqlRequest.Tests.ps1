@@ -63,10 +63,10 @@ Describe 'Invoke-OmadaSqlRequest' -Tag 'Unit' {
     }
 
     It 'Asks OmadaWeb.PS to follow paging for <Case>' -ForEach @(
-        @{ Case = 'a paged GET when OmadaWeb.PS supports it'; Method = 'GET'; Paged = $true; Supported = $true; Expected = $true }
-        @{ Case = 'no GET that was not asked to page'; Method = 'GET'; Paged = $false; Supported = $true; Expected = $false }
-        @{ Case = 'no paged write'; Method = 'POST'; Paged = $true; Supported = $true; Expected = $false }
-        @{ Case = 'no paged GET when OmadaWeb.PS lacks -Paged'; Method = 'GET'; Paged = $true; Supported = $false; Expected = $false }
+        @{ Case = 'a paged GET when OmadaWeb.PS supports it'; Method = 'GET'; AskPaged = $true; Supported = $true; Expected = $true }
+        @{ Case = 'no GET that was not asked to page'; Method = 'GET'; AskPaged = $false; Supported = $true; Expected = $false }
+        @{ Case = 'no paged write'; Method = 'POST'; AskPaged = $true; Supported = $true; Expected = $false }
+        @{ Case = 'no paged GET when OmadaWeb.PS lacks -Paged'; Method = 'GET'; AskPaged = $true; Supported = $false; Expected = $false }
     ) {
         Mock Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' { $null }
         if ($Supported) {
@@ -75,10 +75,11 @@ Describe 'Invoke-OmadaSqlRequest' -Tag 'Unit' {
         else {
             Mock Test-OmadaSqlRestMethodParameter -ModuleName 'OmadaSql.PS' { $false }
         }
-        InModuleScope 'OmadaSql.PS' -Parameters @{ Context = $Script:Context; Method = $Method; Paged = $Paged } {
-            param($Context, $Method, $Paged)
-            $null = Invoke-OmadaSqlRequest -Context $Context -Method $Method -Path 'odata/x' -Paged:$Paged
+        InModuleScope 'OmadaSql.PS' -Parameters @{ Context = $Script:Context; Method = $Method; AskPaged = $AskPaged } {
+            param($Context, $Method, $AskPaged)
+            $null = Invoke-OmadaSqlRequest -Context $Context -Method $Method -Path 'odata/x' -Paged:$AskPaged
         }
+        # The test data must not be named Paged: an unbound -Paged in the filter would read it instead.
         if ($Expected) {
             Should -Invoke Invoke-OmadaRestMethod -ModuleName 'OmadaSql.PS' -Times 1 -Exactly -ParameterFilter { $Paged -eq $true }
         }
