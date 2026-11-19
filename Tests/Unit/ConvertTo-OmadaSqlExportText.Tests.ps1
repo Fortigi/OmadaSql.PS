@@ -15,7 +15,8 @@ Describe 'Get-OmadaSqlExportColumn' -Tag 'Unit' {
             $Column = Get-OmadaSqlExportColumn -Row @([pscustomobject]@{ B = 1; A = 2 }, [pscustomobject]@{ C = 3 })
             $Column.GetType() | Should -Be ([string[]])
             $Column | Should -Be @('B', 'A')
-            Get-OmadaSqlExportColumn -Row @([ordered]@{ Z = 1; Y = 2 }) | Should -Be @('Z', 'Y')
+            $Dictionary = Get-OmadaSqlExportColumn -Row @([ordered]@{ Z = 1; Y = 2 })
+            $Dictionary | Should -Be @('Z', 'Y')
         }
     }
 
@@ -35,7 +36,7 @@ Describe 'Format-OmadaSqlExportValue' -Tag 'Unit' {
         @{ Case = 'a string'; Value = 'abc'; Expected = 'abc' }
         @{ Case = 'a date'; Value = [datetime]::new(2026, 1, 2, 3, 4, 5, 60); Expected = '2026-01-02T03:04:05.060' }
         @{ Case = 'a date with an offset'; Value = [datetimeoffset]::new(2026, 1, 2, 3, 4, 5, [timespan]::FromHours(1)); Expected = '2026-01-02T03:04:05.0000000+01:00' }
-        @{ Case = 'a decimal'; Value = [decimal]'12.50'; Expected = '12.50' }
+        @{ Case = 'a decimal'; Value = [decimal]::Parse('12.50', [System.Globalization.CultureInfo]::InvariantCulture); Expected = '12.50' }
         @{ Case = 'a double'; Value = [double]0.1; Expected = '0.1' }
         @{ Case = 'a float'; Value = [single]1.5; Expected = '1.5' }
         @{ Case = 'an integer'; Value = 1234567; Expected = '1234567' }
@@ -106,7 +107,8 @@ Describe 'ConvertTo-OmadaSqlJsonText' -Tag 'Unit' {
     It 'Writes an array of objects in column order, with null, numbers and ISO dates' {
         $Rows = @([pscustomobject]@{ B = 'x'; A = $null; N = 5; D = [datetime]::new(2026, 3, 4, 5, 6, 7); X = [System.DBNull]::Value })
         $Text = InModuleScope 'OmadaSql.PS' -Parameters @{ Rows = $Rows } { param($Rows) ConvertTo-OmadaSqlJsonText -Row $Rows -Column @('B', 'A', 'N', 'D', 'X') }
-        $Parsed = @($Text | ConvertFrom-Json)
+        # Windows PowerShell writes a parsed JSON array as one object; enumerate it on both editions.
+        $Parsed = @(($Text | ConvertFrom-Json) | ForEach-Object { $_ })
         $Parsed.Count | Should -Be 1
         @($Parsed[0].PSObject.Properties.Name) | Should -Be @('B', 'A', 'N', 'D', 'X')
         $Parsed[0].A | Should -BeNullOrEmpty

@@ -60,7 +60,7 @@ Describe 'ConvertTo-OmadaSqlSqlLiteral' -Tag 'Unit' {
     It 'Writes <Case> as <Expected>' -ForEach @(
         @{ Case = 'null'; Value = $null; Kind = 'String'; Expected = 'NULL' }
         @{ Case = 'a number'; Value = '12.50'; Kind = 'Number'; Expected = '12.50' }
-        @{ Case = 'a CLR number'; Value = [decimal]'3.0'; Kind = 'Number'; Expected = '3.0' }
+        @{ Case = 'a CLR number'; Value = [decimal]::Parse('3.0', [System.Globalization.CultureInfo]::InvariantCulture); Kind = 'Number'; Expected = '3.0' }
         @{ Case = 'true'; Value = $true; Kind = 'Boolean'; Expected = '1' }
         @{ Case = 'false'; Value = $false; Kind = 'Boolean'; Expected = '0' }
         @{ Case = 'a date'; Value = [datetime]::new(2026, 5, 6, 7, 8, 9); Kind = 'DateTime'; Expected = "'2026-05-06T07:08:09.000'" }

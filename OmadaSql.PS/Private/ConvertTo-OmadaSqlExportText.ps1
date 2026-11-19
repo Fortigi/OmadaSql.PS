@@ -139,18 +139,22 @@ function ConvertTo-OmadaSqlCsvField {
     <#
     .SYNOPSIS
     One CSV field: quoted with inner quotes doubled, or empty for $null.
+
+    .DESCRIPTION
+    The parameter is an object, not a string: PowerShell turns $null into '' when it binds a string
+    parameter, which would make a null value indistinguishable from an empty one.
     #>
     [CmdletBinding()]
     [OutputType([string])]
     param(
         [AllowNull()]
-        [string]$Text
+        [object]$Text
     )
 
     if ($null -eq $Text) {
         return ''
     }
-    return '"{0}"' -f $Text.Replace('"', '""')
+    return '"{0}"' -f ([string]$Text).Replace('"', '""')
 }
 
 function ConvertTo-OmadaSqlJsonText {
@@ -257,7 +261,7 @@ function ConvertTo-OmadaSqlXmlText {
 function Write-OmadaSqlXmlField {
     <#
     .SYNOPSIS
-    Writes one Field element.
+    Writes one Field element. Text is an object so that $null stays $null (see ConvertTo-OmadaSqlCsvField).
     #>
     [CmdletBinding()]
     param(
@@ -268,7 +272,7 @@ function Write-OmadaSqlXmlField {
         [string]$Name,
 
         [AllowNull()]
-        [string]$Text
+        [object]$Text
     )
 
     $Writer.WriteStartElement('Field')
@@ -277,7 +281,7 @@ function Write-OmadaSqlXmlField {
         $Writer.WriteAttributeString('Null', 'true')
     }
     else {
-        $Writer.WriteString($Text)
+        $Writer.WriteString([string]$Text)
     }
     $Writer.WriteEndElement()
 }
