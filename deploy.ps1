@@ -51,6 +51,11 @@ try {
     }
     "ModuleTargetFolder {0}" -f $ModuleTargetFolder | Write-Verbose
 
+    # Everything below replaces files in the target folder, so -WhatIf and -Confirm decide here.
+    if (-not $PSCmdlet.ShouldProcess($ModuleTargetFolder, ("Deploy {0} {1}" -f $ModuleName, $Version))) {
+        return
+    }
+
     if (Test-Path $ModuleTargetFolder) {
         if ($null -ne (Get-Module $ModuleName)) {
             "Unload module {0}" -f $ModuleName | Write-Verbose
@@ -65,8 +70,9 @@ try {
     Get-ChildItem -Path $ModuleSourceFolder | Copy-Item -Destination $ModuleTargetFolder -Recurse -Force
     Get-ChildItem $ModuleTargetFolder -Recurse | Unblock-File
     # Drops the build's leftovers (the nuspec, test results) but keeps everything the module needs at
-    # runtime. Folders (bundled assemblies) are left alone by -File.
-    $KeepFile = @("OmadaSql.PS.psm1", "OmadaSql.PS.psd1")
+    # runtime. Folders (bundled assemblies) are left alone by -File; the license notice of the bundled
+    # parser has to travel with it, and the manifest's FileList names it.
+    $KeepFile = @("OmadaSql.PS.psm1", "OmadaSql.PS.psd1", "THIRD-PARTY-NOTICES.md")
     Get-ChildItem $ModuleTargetFolder -File | Where-Object { $_.Name -notin $KeepFile } | Remove-Item -Force
     "Finished" | Write-Host
 }
