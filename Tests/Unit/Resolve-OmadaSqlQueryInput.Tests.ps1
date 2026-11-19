@@ -40,9 +40,9 @@ Describe 'Resolve-OmadaSqlQueryInput' -Tag 'Unit' {
         @{ Kind = 'int'; Value = [int]42 }
         @{ Kind = 'string'; Value = '42' }
     ) {
-        $Script:IdValue = $Value
-        InModuleScope 'OmadaSql.PS' {
-            $Resolved = Resolve-OmadaSqlQueryInput -ParameterSetName 'Query' -Parameter @{ Query = '@{Id=42}'; DataConnection = 'OISES' } -InputObject ([pscustomobject]@{ Id = $Script:IdValue }) -ExpectingInput
+        InModuleScope 'OmadaSql.PS' -Parameters @{ IdValue = $Value } {
+            param($IdValue)
+            $Resolved = Resolve-OmadaSqlQueryInput -ParameterSetName 'Query' -Parameter @{ Query = '@{Id=42}'; DataConnection = 'OISES' } -InputObject ([pscustomobject]@{ Id = $IdValue }) -ExpectingInput
             $Resolved.ParameterSetName | Should -Be 'Id'
             $Resolved.Parameter.Id | Should -Be 42
             $Resolved.Parameter.Id.GetType() | Should -Be ([long])
@@ -67,21 +67,19 @@ Describe 'Resolve-OmadaSqlQueryInput' -Tag 'Unit' {
         @{ Kind = 'object with a non-numeric Id'; Piped = [pscustomobject]@{ Id = 'abc' }; TypeName = 'System.Management.Automation.PSCustomObject' }
         @{ Kind = 'number'; Piped = 42; TypeName = 'System.Int32' }
     ) {
-        $Script:PipedObject = $Piped
-        $Script:Caught = $null
-        InModuleScope 'OmadaSql.PS' {
-            try { $null = Resolve-OmadaSqlQueryInput -ParameterSetName 'Query' -Parameter @{ Query = 'x' } -InputObject $Script:PipedObject -ExpectingInput } catch { $Script:Caught = $_ }
+        $Caught = InModuleScope 'OmadaSql.PS' -Parameters @{ PipedObject = $Piped } {
+            param($PipedObject)
+            try { $null = Resolve-OmadaSqlQueryInput -ParameterSetName 'Query' -Parameter @{ Query = 'x' } -InputObject $PipedObject -ExpectingInput } catch { $_ }
         }
-        $Script:Caught.FullyQualifiedErrorId | Should -Be 'OmadaSql.InvalidArgument'
-        $Script:Caught.Exception.Message | Should -BeLike ("Pipeline input of type {0} is neither SQL text*" -f $TypeName)
+        $Caught.FullyQualifiedErrorId | Should -Be 'OmadaSql.InvalidArgument'
+        $Caught.Exception.Message | Should -BeLike ("Pipeline input of type {0} is neither SQL text*" -f $TypeName)
     }
 
     It 'Names a null pipeline object in the error' {
-        $Script:Caught = $null
-        InModuleScope 'OmadaSql.PS' {
-            try { $null = Resolve-OmadaSqlQueryInput -ParameterSetName 'Query' -Parameter @{ Query = 'x' } -InputObject $null -ExpectingInput } catch { $Script:Caught = $_ }
+        $Caught = InModuleScope 'OmadaSql.PS' {
+            try { $null = Resolve-OmadaSqlQueryInput -ParameterSetName 'Query' -Parameter @{ Query = 'x' } -InputObject $null -ExpectingInput } catch { $_ }
         }
-        $Script:Caught.Exception.Message | Should -BeLike 'Pipeline input of type null is*'
+        $Caught.Exception.Message | Should -BeLike 'Pipeline input of type null is*'
     }
 }
 
@@ -94,8 +92,7 @@ Describe 'Get-OmadaSqlPipelineId' -Tag 'Unit' {
         @{ Kind = 'a decimal Id'; Piped = [pscustomobject]@{ Id = '1.5' }; Expected = 0 }
         @{ Kind = 'null'; Piped = $null; Expected = 0 }
     ) {
-        $Script:PipedObject = $Piped
-        $Id = InModuleScope 'OmadaSql.PS' { Get-OmadaSqlPipelineId -InputObject $Script:PipedObject }
+        $Id = InModuleScope 'OmadaSql.PS' -Parameters @{ PipedObject = $Piped } { param($PipedObject) Get-OmadaSqlPipelineId -InputObject $PipedObject }
         $Id | Should -Be $Expected
         $Id.GetType() | Should -Be ([long])
     }
