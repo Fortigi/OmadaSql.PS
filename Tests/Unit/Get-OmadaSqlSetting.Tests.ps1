@@ -38,10 +38,22 @@ Describe 'Get-OmadaSqlSetting' -Tag 'Unit' {
         (InModuleScope 'OmadaSql.PS' { Get-OmadaSqlSetting }).MaxTempQuerySlots | Should -Be 4
     }
 
-    It 'Replaces a profile id that is not 32 hex characters' {
+    It 'Replaces a profile id that is not 32 hex characters and keeps the configured slots' {
         $null = New-Item -Path (Split-Path $Script:Path) -ItemType Directory -Force
         [System.IO.File]::WriteAllText($Script:Path, '{ "InstanceGuid": "not-a-guid", "MaxTempQuerySlots": 2 }')
-        (InModuleScope 'OmadaSql.PS' { Get-OmadaSqlSetting }).InstanceGuid | Should -Match '^[0-9a-f]{32}$'
+        $Setting = InModuleScope 'OmadaSql.PS' { Get-OmadaSqlSetting }
+        $Setting.InstanceGuid | Should -Match '^[0-9a-f]{32}$'
+        $Setting.MaxTempQuerySlots | Should -Be 2
+        $Saved = Get-Content -LiteralPath $Script:Path -Raw | ConvertFrom-Json
+        $Saved.InstanceGuid | Should -Be $Setting.InstanceGuid
+        $Saved.MaxTempQuerySlots | Should -Be 2
+    }
+
+    It 'Refuses an out-of-range slot count before it replaces a bad profile id' {
+        $null = New-Item -Path (Split-Path $Script:Path) -ItemType Directory -Force
+        [System.IO.File]::WriteAllText($Script:Path, '{ "InstanceGuid": "not-a-guid", "MaxTempQuerySlots": 40 }')
+        InModuleScope 'OmadaSql.PS' { { Get-OmadaSqlSetting } | Should -Throw -ErrorId 'OmadaSql.InvalidArgument' }
+        (Get-Content -LiteralPath $Script:Path -Raw | ConvertFrom-Json).InstanceGuid | Should -Be 'not-a-guid'
     }
 
     It 'Refuses <Slots> slots' -ForEach @(@{ Slots = 0 }, @{ Slots = 33 }) {

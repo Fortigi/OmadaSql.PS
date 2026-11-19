@@ -20,17 +20,17 @@ function Get-OmadaSqlSetting {
     if (Test-Path -LiteralPath $Path -PathType Leaf) {
         $Stored = Get-Content -LiteralPath $Path -Raw -Encoding UTF8 | ConvertFrom-Json
     }
-    $InstanceGuid = [string](Get-OmadaSqlPropertyValue -InputObject $Stored -Name 'InstanceGuid')
-    if ($InstanceGuid -notmatch '^[0-9a-f]{32}$') {
-        $InstanceGuid = [guid]::NewGuid().ToString('N')
-        Save-OmadaSqlSetting -Path $Path -Setting ([ordered]@{ InstanceGuid = $InstanceGuid; MaxTempQuerySlots = 4 })
-    }
     $Slots = Get-OmadaSqlPropertyValue -InputObject $Stored -Name 'MaxTempQuerySlots'
     if ($null -eq $Slots) {
         $Slots = 4
     }
     if ([int]$Slots -lt 1 -or [int]$Slots -gt 32) {
         throw (New-OmadaSqlErrorRecord -Kind 'InvalidArgument' -Message ("MaxTempQuerySlots in '{0}' is {1}; it must be between 1 and 32." -f $Path, $Slots) -TargetObject $Path)
+    }
+    $InstanceGuid = [string](Get-OmadaSqlPropertyValue -InputObject $Stored -Name 'InstanceGuid')
+    if ($InstanceGuid -notmatch '^[0-9a-f]{32}$') {
+        $InstanceGuid = [guid]::NewGuid().ToString('N')
+        Save-OmadaSqlSetting -Path $Path -Setting ([ordered]@{ InstanceGuid = $InstanceGuid; MaxTempQuerySlots = [int]$Slots })
     }
     [pscustomobject]@{
         InstanceGuid      = $InstanceGuid

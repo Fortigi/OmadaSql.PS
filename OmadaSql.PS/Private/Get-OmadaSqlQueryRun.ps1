@@ -61,7 +61,8 @@ function Get-OmadaSqlSavedQuery {
         default { return $null }
     }
     if ($null -eq $Raw) {
-        throw (New-OmadaSqlErrorRecord -Kind 'NotFound' -Message ("No SQL Troubleshooting object named '{0}' was found." -f $Parameter['Name']) -TargetObject $Parameter['Name'])
+        $Message = if ($ParameterSetName -eq 'Id') { "No SQL Troubleshooting object with id {0} was found." -f $Parameter['Id'] } else { "No SQL Troubleshooting object named '{0}' was found." -f $Parameter['Name'] }
+        throw (New-OmadaSqlErrorRecord -Kind 'NotFound' -Message $Message -TargetObject $Parameter[$ParameterSetName])
     }
     return ($Raw | ConvertTo-OmadaSqlQueryObject -BaseUrl $Context.Connection.BaseUrl)
 }

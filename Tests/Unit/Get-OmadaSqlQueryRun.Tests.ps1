@@ -48,7 +48,19 @@ Describe 'Get-OmadaSqlQueryRun' -Tag 'Unit' {
             $Caught = $null
             try { $null = Get-OmadaSqlQueryRun -Context (Get-OmadaSqlConnectionContext) -ParameterSetName 'Name' -Parameter @{ Name = 'Nope' } } catch { $Caught = $_ }
             $Caught.FullyQualifiedErrorId | Should -Be 'OmadaSql.NotFound'
-            $Caught.Exception.Message | Should -BeLike "*'Nope'*"
+            $Caught.Exception.Message | Should -Be "No SQL Troubleshooting object named 'Nope' was found."
+            $Caught.TargetObject | Should -Be 'Nope'
+        }
+    }
+
+    It 'Fails with NotFound naming the id for an unknown id' {
+        Mock Get-OmadaSqlQueryData -ModuleName 'OmadaSql.PS' { }
+        InModuleScope 'OmadaSql.PS' {
+            $Caught = $null
+            try { $null = Get-OmadaSqlQueryRun -Context (Get-OmadaSqlConnectionContext) -ParameterSetName 'Id' -Parameter @{ Id = [long]77 } } catch { $Caught = $_ }
+            $Caught.FullyQualifiedErrorId | Should -Be 'OmadaSql.NotFound'
+            $Caught.Exception.Message | Should -Be 'No SQL Troubleshooting object with id 77 was found.'
+            $Caught.TargetObject | Should -Be 77
         }
     }
 
