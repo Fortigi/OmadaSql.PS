@@ -22,19 +22,15 @@ function Get-OmadaSqlRule {
     [OutputType([pscustomobject])]
     param()
 
-    foreach ($Rule in @(
-            @('OMD001', 'Result column has no name', 'Warning', 'Find-OmadaSqlNamelessResultColumn')
-            @('OMD003', 'Alias is renamed in the result', 'Info', 'Find-OmadaSqlRenamedAlias')
-            @('OMD004', 'Nameless column in a derived table, CTE or SELECT INTO', 'Error', 'Find-OmadaSqlNamelessScopedColumn')
-            @('OMD010', 'Data manipulation is not available', 'Error', 'Find-OmadaSqlDataManipulation')
-            @('OMD011', 'Data definition is not available', 'Error', 'Find-OmadaSqlDataDefinition')
-            @('OMD012', 'Stored procedures and dynamic SQL are not available', 'Error', 'Find-OmadaSqlExecute')
-            @('OMD013', 'Temporary tables are not available', 'Error', 'Find-OmadaSqlTemporaryTable')
-            @('OMD020', 'Four-part name', 'Error', 'Find-OmadaSqlFourPartName')
-            @('OMD021', 'More than one database in one statement', 'Error', 'Find-OmadaSqlCrossDatabase')
-        )) {
-        [pscustomobject]@{ Id = $Rule[0]; Title = $Rule[1]; Severity = $Rule[2]; Find = $Rule[3] }
-    }
+    [pscustomobject]@{ Id = 'OMD001'; Title = 'Result column has no name'; Severity = 'Warning'; Find = 'Find-OmadaSqlNamelessResultColumn' }
+    [pscustomobject]@{ Id = 'OMD003'; Title = 'Alias is renamed in the result'; Severity = 'Info'; Find = 'Find-OmadaSqlRenamedAlias' }
+    [pscustomobject]@{ Id = 'OMD004'; Title = 'Nameless column in a derived table, CTE or SELECT INTO'; Severity = 'Error'; Find = 'Find-OmadaSqlNamelessScopedColumn' }
+    [pscustomobject]@{ Id = 'OMD010'; Title = 'Data manipulation is not available'; Severity = 'Error'; Find = 'Find-OmadaSqlDataManipulation' }
+    [pscustomobject]@{ Id = 'OMD011'; Title = 'Data definition is not available'; Severity = 'Error'; Find = 'Find-OmadaSqlDataDefinition' }
+    [pscustomobject]@{ Id = 'OMD012'; Title = 'Stored procedures and dynamic SQL are not available'; Severity = 'Error'; Find = 'Find-OmadaSqlExecute' }
+    [pscustomobject]@{ Id = 'OMD013'; Title = 'Temporary tables are not available'; Severity = 'Error'; Find = 'Find-OmadaSqlTemporaryTable' }
+    [pscustomobject]@{ Id = 'OMD020'; Title = 'Four-part name'; Severity = 'Error'; Find = 'Find-OmadaSqlFourPartName' }
+    [pscustomobject]@{ Id = 'OMD021'; Title = 'More than one database in one statement'; Severity = 'Error'; Find = 'Find-OmadaSqlCrossDatabase' }
 }
 
 function Find-OmadaSqlNamelessResultColumn {
