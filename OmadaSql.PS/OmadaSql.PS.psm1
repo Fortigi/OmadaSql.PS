@@ -33,6 +33,8 @@ $Script:OmadaSqlFragmentPropertyCache = @{}
 $Script:OmadaSqlSettingsPath = $null
 # How long Invoke-OmadaSqlQuery waits for a free temporary query slot before it gives up.
 $Script:OmadaSqlSlotTimeoutSeconds = 300
+# Export formats by name, filled with the built-in formats on first use (Get-OmadaSqlExportFormatTable).
+$Script:OmadaSqlExportFormat = $null
 # Parameter names of the loaded Invoke-OmadaRestMethod, resolved once (see Test-OmadaSqlRestMethodParameter).
 $Script:OmadaSqlRestMethodParameterCache = $null
 

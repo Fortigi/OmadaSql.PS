@@ -2,6 +2,11 @@ param(
     [string]$ModulePath = (Join-Path $(Split-Path $(Split-Path $PSScriptRoot)) -ChildPath 'OmadaSql.PS\OmadaSql.PS.psm1')
 )
 
+BeforeDiscovery {
+    # The case table feeds -ForEach, which Pester evaluates during discovery, before BeforeAll.
+    . (Join-Path -Path $PSScriptRoot -ChildPath 'Helpers\OmadaSqlTestHelper.ps1')
+}
+
 BeforeAll {
     . (Join-Path -Path $PSScriptRoot -ChildPath 'Helpers\OmadaSqlTestHelper.ps1')
     Import-OmadaWebStub

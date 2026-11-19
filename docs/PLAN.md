@@ -20,6 +20,10 @@ tenant or documentation before it is relied on.
 | Temporary object cleanup | `Get-OmadaSqlTempQuery` / `Clear-OmadaSqlTempQuery`: by default only this profile's slots, identified by the `InstanceGuid` in the object name (`-All` widens to every `TMP_` object), never a leased slot. Live objects are soft-deleted; with `-Purge` they are also purged with `PurgeDataObject` (irreversible: `ConfirmImpact = 'High'`, never the default). Filtering on the name instead of `tblDataObject.CreatedBy` keeps cleanup independent of SQL Troubleshooting and of resolving the signed-in user's object ID; it also means another profile of the same user is only covered by `-All`. See "Deleted objects" below. |
 | Object overview | `Get-OmadaSqlQuery -Detailed`: all OData properties, the resolved data connection, the owner (created by / changed by) and the history in one object. |
 | Validation | On by default, `-SkipValidation` to skip. A blocking diagnostic is a terminating error, never a prompt. Severity per rule can be overridden. |
+| Schema | `Get-OmadaSqlSchema` reads `GetSqlSchema` per data connection (body `{ connectionId }`, the id as a string; the answer maps `schema.table` to `"Column Type"` entries, views included) and caches it on the connection for the session; `-Force` reads it again, `Disconnect-OmadaSql` drops it. |
+| Schema rules | OMD030 (table not in the schema), OMD031 (column not in the schema), OMD032 (ambiguous column), all **Info**, so they never block: the schema is a cached copy. They run only in `Test-OmadaSqlQuery -DataConnection`, against each statement's own data connection; `Invoke-OmadaSqlQuery` does not read the schema, so a run costs no extra request. A query scope with a derived table, function, CTE, temporary table or unresolved table among its own sources is not checked for columns (no guessing). The checks follow OmadaSqlTroubleshooter's schema pass, which has no rule ids; the ids are this module's. |
+| Export | `Export-OmadaSqlResult` with a format registry (`Get-OmadaSqlExportFormat`, `Register-OmadaSqlExportFormat`; built-in formats cannot be replaced). Built in: Csv, Json, Xml, Text, SqlArray, PowerShellArray. Without `-Format` the format follows the `-Path` extension, as the Troubleshooter's Save As does. Output is culture-independent (invariant numbers, ISO 8601 dates) and UTF-8, by default without a byte order mark (`-Encoding UTF8BOM` for Excel); an existing file is only replaced with `-Force`. |
+| Export, deviations from OmadaSqlTroubleshooter | CSV defaults to a comma (RFC 4180) instead of a semicolon (`-Option @{ Delimiter = ';' }` gives the Troubleshooter's output); a null value is an empty unquoted field. Xml is a plain `<Result><Row><Field Name>` document instead of `Export-Clixml`, so any XML tool can read it. Json is the array of rows, not the whole `{ d: ... }` response. SqlArray and PowerShellArray type each column from its values (a column of canonical numbers is unquoted, `007` stays text), not from the schema. |
 | Live tenant tests | None for now (no test tenant). Integration tests use a local `HttpListener` mock of the Omada endpoints. |
 | Generic bulk undelete / purge of other object types | **Parked.** Out of scope for this module for now; a separate module later can share the request and OData listing helpers. Only `TMP_` cleanup is built here. |
 | Quality gates | Required for every pull request: PSComplexity (15 cyclomatic / 15 cognitive per function, empty baseline) and PSMutant (75% over the changed files and 75% for each file, an owning unit test file for every changed source file, uncovered lines mutated too). |
@@ -77,9 +81,9 @@ Each phase is one pull request, test first.
    Temporary-object listing and cleanup moved to phase 4, together with the slot pool.
 3. **ScriptDom** *(done)* - bundling (dependency lock, Dependabot `nuget`), statement splitting,
    database-name resolution, rules and syntax checker.
-4. **Execution** *(in progress)* - saved and ad-hoc queries, slot pool with mutex, multi-statement, result objects,
+4. **Execution** *(done)* - saved and ad-hoc queries, slot pool with mutex, multi-statement, result objects,
    `Get-OmadaSqlTempQuery` and `Clear-OmadaSqlTempQuery`.
-5. **Schema and export** - schema model and cache, export format registry.
+5. **Schema and export** *(in progress)* - schema model and cache, schema rules, export format registry.
 6. **Integration and release** - `HttpListener` mock of the Omada endpoints, README, first nightly.
 
 ## Deleted objects
