@@ -103,15 +103,32 @@ function Start-TenantTestSlotHold {
             $Mutex.Dispose()
         }).AddArgument($MutexName).AddArgument($Ready).AddArgument($Release)
     $Handle = $PowerShell.BeginInvoke()
-    if (-not $Ready.WaitOne(30000)) {
+    try {
+        $Held = $Ready.WaitOne(30000)
+    }
+    finally {
+        $Ready.Dispose()
+    }
+    $Hold = [pscustomobject]@{ PowerShell = $PowerShell; Handle = $Handle; Release = $Release }
+    if (-not $Held) {
+        # The thread may still be waiting for the mutex: stop it and free everything before failing.
+        Stop-TenantTestSlotHold -Hold $Hold
         throw "Could not hold mutex $MutexName."
     }
-    [pscustomobject]@{ PowerShell = $PowerShell; Handle = $Handle; Release = $Release }
+    return $Hold
 }
 
 function Stop-TenantTestSlotHold {
+    # Releases the mutex, waits for the thread to end and disposes the runspace and the event.
     param([Parameter(Mandatory = $true)] $Hold)
-    $null = $Hold.Release.Set()
-    $null = $Hold.Handle.AsyncWaitHandle.WaitOne(30000)
-    $Hold.PowerShell.Dispose()
+    try {
+        $null = $Hold.Release.Set()
+        if (-not $Hold.Handle.AsyncWaitHandle.WaitOne(30000)) {
+            $Hold.PowerShell.Stop()
+        }
+    }
+    finally {
+        $Hold.PowerShell.Dispose()
+        $Hold.Release.Dispose()
+    }
 }

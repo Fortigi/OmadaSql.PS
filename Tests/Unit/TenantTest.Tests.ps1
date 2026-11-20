@@ -51,10 +51,18 @@ Describe 'Tests/Tenant/TenantTestHelper.ps1' {
         . (Join-Path $Script:TenantFolder 'TenantTestHelper.ps1')
     }
 
-    It 'gives queries that read no table by name, except through VALUES' {
+    It 'gives queries that read no table by name: every FROM, JOIN and APPLY source is a VALUES list' {
         foreach ($Query in (Get-TenantTestQuery).Values) {
-            $Query | Should -Not -Match '\bFROM\s+(?!\(VALUES)' -Because "'$Query' must be general"
+            $Query | Should -Not -Match '\b(FROM|JOIN|APPLY)\s+(?!\(VALUES)' -Because "'$Query' must be general"
         }
+    }
+
+    It 'catches a table read through <Case>' -ForEach @(
+        @{ Case = 'FROM'; Query = 'SELECT [a] = 1 FROM dbo.tblDataObject' }
+        @{ Case = 'JOIN'; Query = 'SELECT [a] = 1 FROM (VALUES (1)) AS v (n) JOIN dbo.tblDataObject AS t ON 1 = 1' }
+        @{ Case = 'CROSS APPLY'; Query = 'SELECT [a] = 1 FROM (VALUES (1)) AS v (n) CROSS APPLY dbo.SomeFunction(v.n) AS f' }
+    ) {
+        $Query | Should -Match '\b(FROM|JOIN|APPLY)\s+(?!\(VALUES)'
     }
 
     It 'gives queries the module accepts' {
