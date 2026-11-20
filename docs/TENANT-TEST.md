@@ -5,91 +5,126 @@ endpoints. What the mock cannot show is how a real tenant answers. This checklis
 open items in [PLAN.md](PLAN.md#open-items-to-verify-not-assume), and the assumptions the module
 makes about request and response shapes.
 
-Run it against a **test or acceptance tenant**, never production: several steps create, delete and
-purge objects. Record the outcome of every step (pass, fail, or what was observed), and copy the
-**shape** of a response where a step asks for it, with values that identify the tenant or a person
-replaced. Update `docs/PLAN.md` and open an issue for every deviation.
+Run it against a **test or acceptance tenant**, never production: it creates, deletes and purges
+objects. Every query it runs is general: constants, `VALUES` lists and the schema of the data
+connection you give it. It reads no Omada table by name and no business data, so it runs on any
+tenant and any data connection.
 
-## Preparation
+Most steps are automated in `Tests/Tenant` (column **How**: *auto*). The rest need a person or a
+second tenant (*manual*). Update `docs/PLAN.md` and open an issue for every deviation.
 
-| # | Step | Expected |
-|---|---|---|
-| P1 | Two accounts on the test tenant: an **administrator** (System, Operation or Data Administrator) and a **regular user** with Read, Create, Update and Delete on the `OData` auth element for SQL Troubleshooting, and no administrator role. | Both can open SQL Troubleshooting in the web UI. |
-| P2 | Install the module from a local build or the first nightly: `./Build/build.ps1 -Task Build; ./deploy.ps1 -Scope CurrentUser`. | `Get-Module OmadaSql.PS -ListAvailable` shows the version. |
-| P3 | Note the name of at least one data connection (for example `OISES`) and of a second one if the tenant has it. | - |
-| P4 | Use a fresh settings file for the test, so the slot pool starts empty: rename `%LOCALAPPDATA%\OmadaSql.PS\settings.json` if it exists. | - |
-| P5 | Run every step with `-Verbose` when the outcome is unexpected: it shows each request (method, URI, outcome), never bodies. | - |
+## Running the automated steps
 
-All objects this checklist creates are named `OSQLTEST <step>` so they are easy to find and remove.
+Prerequisites:
+
+- Pester 5.5 or later: `Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser`.
+- The module installed from a local build or the first nightly: `./Build/build.ps1 -Task Build`,
+  then `./deploy.ps1 -Scope CurrentUser`.
+- Two accounts on the test tenant:
+  - a **regular user** with Read, Create, Update and Delete on the `OData` auth element for SQL
+    Troubleshooting and no administrator role;
+  - an **administrator** (System, Operation or Data Administrator).
+- The name of a data connection, and of a second one if the tenant has it.
+
+Run the test twice on the same Windows profile, regular user first:
+
+```powershell
+Import-Module OmadaSql.PS
+Connect-OmadaSql -Url 'https://<test tenant>.omada.cloud'          # sign in as the regular user
+./Tests/Tenant/Invoke-OmadaSqlTenantTest.ps1 -Role User -DataConnection '<dc>' -SecondDataConnection '<dc2>'
+Disconnect-OmadaSql
+
+Connect-OmadaSql -Url 'https://<test tenant>.omada.cloud'          # sign in as the administrator
+./Tests/Tenant/Invoke-OmadaSqlTenantTest.ps1 -Role Administrator -DataConnection '<dc>' -SecondDataConnection '<dc2>' -IncludeLargeResult
+```
+
+Run both passes on Windows PowerShell 5.1 and on PowerShell 7.
+
+Optional parameters:
+
+- `-QueryPath <folder>`: checks the team's own `.sql` files against the schema rules (step 4.6).
+- `-IncludeLargeResult`: adds the result of 161 051 rows (step 3.12).
+
+Each run writes a folder `TenantTestResult-<role>-<timestamp>` with:
+
+- `results.xml`: NUnit, one test per step, named by its number.
+- `observations.json`: what the tenant did where the module only assumes it. It holds shapes
+  (property names and .NET types) and outcomes, not values. Error messages are kept, so **read it
+  before you share it**.
+
+A step marked *observes* passes whatever the tenant does. Its outcome is in `observations.json`, and
+the checklist says what to look for.
+
+The objects the test creates are named `OSQLTEST <run id> <step>` and are removed at the end. The
+administrator pass purges the temporary query objects both passes used.
 
 ## 1. Connection and data connections
 
-| # | Step | Expected | Settles |
+| # | How | Step | Expected |
 |---|---|---|---|
-| 1.1 | `Connect-OmadaSql -Url 'https://<tenant>.omada.cloud'` (interactive), then `Get-OmadaSqlConnection`. | Connects; the connection test (`odata/dataobjects/C_P_SQLTROUBLESHOOTING?$top=1`) passes. | Endpoint and auth |
-| 1.2 | Connect unattended: `-AuthenticationType OAuth -NoInteractiveAuthentication -ClientId ... -OAuthCertificateThumbprint ... -EntraIdTenantId ...`. | Connects without a browser. | Unattended sign-in |
-| 1.3 | On a tenant without the SQL Troubleshooting OData endpoint enabled (if one is available), connect. | `OmadaSql.EndpointNotEnabled`. | Error classification |
-| 1.4 | `Get-OmadaSqlDataConnection` | The same list of data connections as the dropdown in the SQL Troubleshooting form, with ids. | View lookup and the `dataobjdlg.aspx` option list |
+| 1.1 | manual | `Connect-OmadaSql -Url ...` interactively, then `Get-OmadaSqlConnection`. | Connects; the connection test (`C_P_SQLTROUBLESHOOTING?$top=1`) passes. |
+| 1.2 | manual | Connect unattended: `-AuthenticationType OAuth -NoInteractiveAuthentication -ClientId ... -OAuthCertificateThumbprint ... -EntraIdTenantId ...`. | Connects without a browser. |
+| 1.3 | manual | On a tenant without the SQL Troubleshooting OData endpoint (if one is available), connect. | `OmadaSql.EndpointNotEnabled`. |
+| 1.4 | auto | Lists the data connections and finds the one given. | The list matches the dropdown of the SQL Troubleshooting form (compare the count in observations). |
 
 ## 2. Object management
 
-| # | Step | Expected | Settles |
+| # | How | Step | Expected |
 |---|---|---|---|
-| 2.1 | `New-OmadaSqlQuery -Name 'OSQLTEST 2.1' -Query 'SELECT [Id] = Id FROM dbo.tblDataObject WHERE 1 = 0' -DataConnection '<dc>'` | The object is created and shows in the web UI with the right data connection. | Create body |
-| 2.2 | `Get-OmadaSqlQuery -Name 'OSQLTEST 2.1' -Detailed` | Owner, data connection and history are filled. **Copy the shape** of one raw OData object (`-Verbose` URI, then the same GET in a browser): which properties exist, `EXPLICITOWNER`, and the shape of `C_SQLTROUBLESHOOTING_DATACONNECTION`. | Open item: object properties and reference shape |
-| 2.3 | `Set-OmadaSqlQuery -Name 'OSQLTEST 2.1' -Query 'SELECT [Id] = Id, [Name] = DisplayName FROM dbo.tblDataObject WHERE 1 = 0'`, then `Get-OmadaSqlQueryHistory -Name 'OSQLTEST 2.1'`. | The change is saved; the history shows it. Check whether the first history row has a **'Create'** change type. | Open item: 'Create' in history |
-| 2.4 | `Remove-OmadaSqlQuery -Name 'OSQLTEST 2.1'`, then `Restore-OmadaSqlQuery` it, **as the regular user**. | Note whether the regular user may undelete. | (verify) undelete permission |
-| 2.5 | As the regular user, `Get-OmadaSqlQuery -Name 'OSQLTEST*'` with a deleted object present (deleted listing). | Note whether deleted objects are listed for a non-administrator. | Open item: deleted listing for non-admins |
-| 2.6 | On a tenant with more SQL Troubleshooting objects than its `ODataPageSizeLimit`, `@(Get-OmadaSqlQuery).Count`. | Equals the count in the web UI. If it stops at the page size, note whether the response had `@odata.nextLink`. | Open item: OData paging |
+| 2.1 | auto | Creates an object with the data connection given. | Created with that data connection and query. |
+| 2.2 | auto | Reads the object with `-Detailed`; *observes* the raw OData shape. | History present. In observations: the properties the object has, `HasExplicitOwner`, and the shape of `C_SQLTROUBLESHOOTING_DATACONNECTION`. |
+| 2.3 | auto | Changes the query and reads the history; *observes* the change types. | The change is in the history. In observations: whether `OldestChangeType` is a 'Create'. |
+| 2.4 | auto | Deletes the object and restores it; *observes* whether this role may restore. | Delete works. In observations: `Restored` per role (the open undelete-permission question). |
+| 2.5 | auto | Lists a deleted object; *observes* whether this role sees it. | In observations: `DeletedListed` per role. |
+| 2.6 | auto | Counts all objects; *observes* the counts. | Compare `IncludingDeleted` with the web UI. A count equal to the tenant's `ODataPageSizeLimit` points to a paging problem. |
 
 ## 3. Query execution
 
-| # | Step | Expected | Settles |
+| # | How | Step | Expected |
 |---|---|---|---|
-| 3.1 | `Invoke-OmadaSqlQuery -Query 'SELECT TOP 5 [Id] = Id, [Name] = DisplayName FROM dbo.tblDataObject' -DataConnection '<dc>'` | Five rows. Then `Get-OmadaSqlTempQuery`: one soft-deleted `TMP_<profile id>_1` object. | Temporary object flow |
-| 3.2 | Repeat 3.1. | The same `TMP_..._1` object is restored and reused; no `_2`. | Slot reuse (undelete, update) |
-| 3.3 | **Copy the shape** of one row: `(Invoke-OmadaSqlQuery -Query 'SELECT TOP 1 [Id] = Id, [Created] = CreateTime, [Deleted] = Deleted FROM dbo.tblDataObject' -DataConnection '<dc>') \| Format-List *` and `\| ForEach-Object { $_.PSObject.Properties \| Select-Object Name, TypeNameOfValue }`. | Note whether every value is a string, and how a date and a bit arrive. | Value types (export typing, schema hints) |
-| 3.4 | Two runs at the same time: in two PowerShell windows, start a slow query (`SELECT [n] = COUNT(*) FROM dbo.tblDataObject AS a CROSS JOIN dbo.tblDataObject AS b`, or another that takes several seconds) at once. | Each uses its own slot (`_1` and `_2`); neither fails. | Mutex slot pool |
-| 3.5 | Run a failing statement: `Invoke-OmadaSqlQuery -Query 'SELECT [x] = NoSuchColumn FROM dbo.tblDataObject' -DataConnection '<dc>' -SkipValidation`. | A non-terminating `OmadaSql.ServerError`; the temporary object is soft-deleted afterwards. **Copy the error message and body shape.** | Open item: response for a failing statement |
-| 3.6 | `Invoke-OmadaSqlQuery -Query 'DECLARE @x int = 1; SELECT [x] = @x' -DataConnection '<dc>' -SkipValidation` | Note whether it runs or fails, and how. | Open item: `DECLARE` |
-| 3.7 | A query with an unnamed column, with `-SkipValidation`: `SELECT COUNT(*) FROM dbo.tblDataObject`. | Returns no rows, as OMD001 says. | OMD001 |
-| 3.8 | A query whose alias has a space: `SELECT TOP 1 [Display Name] = DisplayName FROM dbo.tblDataObject`. | The column arrives as `Display_Name`, as OMD003 says. | OMD003 |
-| 3.9 | Text outside ASCII: `SELECT [Text] = N'Zoë € 测试'`. | The text comes back unchanged, on Windows PowerShell 5.1 and PowerShell 7. | Body encoding |
-| 3.10 | A script with two data connections: `SELECT [a] = COUNT(*) FROM [<dc1>].dbo.tblDataObject; SELECT [b] = 1 FROM [<dc2>].<schema>.<table>` with `-AsStatementResult`. | Two results, each from its own data connection. | Database-name resolution |
-| 3.11 | A saved object: create `OSQLTEST 3.11` in the web UI, then `Invoke-OmadaSqlQuery -Name 'OSQLTEST 3.11'`. | Rows; the object's change history shows **no** new change. | Saved objects are read-only |
-| 3.12 | A result of more than 100 000 rows (only if the tenant has that much data). | `OmadaSql.InvalidResult` with the row count, not a truncated result. Note the `Records` value Omada reports. | Open item: paging above 100 000 rows |
+| 3.1 | auto | Runs ad-hoc SQL. | Three rows, through `TMP_<profile id>_1`, which is soft-deleted afterwards. |
+| 3.2 | auto | Runs it again. | The same object is restored and reused. |
+| 3.3 | auto | Runs a row of int, bigint, decimal, float, bit, date, datetime2, uniqueidentifier, text and NULL; *observes* the types. | In observations: whether every value arrives as text, and how bit, decimal and dates are written. |
+| 3.4 | auto | Holds slot 1 from another thread and runs a query. | The run takes slot 2. |
+| 3.5 | auto | Runs `SELECT [x] = 1 / 0`. | One non-terminating error; the temporary object is soft-deleted. In observations: the message (the open question on the failure response). |
+| 3.6 | auto | Sends a `DECLARE` on its own; *observes* the outcome. | In observations: whether it ran or how it failed. |
+| 3.7 | auto | A result with an unnamed column. | No rows (OMD001). |
+| 3.8 | auto | An alias with a space. | The column arrives as `Display_Name` (OMD003). |
+| 3.9 | auto | Text with characters outside ASCII and Latin-1. | Unchanged. |
+| 3.10 | auto | A script whose two statements name two data connections (needs `-SecondDataConnection`). | Both run, each against its own data connection. |
+| 3.11 | auto | Runs a saved object. | Three rows; its history is unchanged. |
+| 3.12 | auto | 161 051 rows (needs `-IncludeLargeResult`). | `OmadaSql.InvalidResult`, or all rows; never a truncated result. In observations: which one. |
 
 ## 4. Validation and schema
 
-| # | Step | Expected | Settles |
+| # | How | Step | Expected |
 |---|---|---|---|
-| 4.1 | `Get-OmadaSqlSchema -DataConnection '<dc>' \| Measure-Object`, and time it with `Measure-Command`. | The tables and views of the data connection; note the count and the time. | `GetSqlSchema` request and answer shape |
-| 4.2 | Repeat 4.1. | Answers at once from the cache; `-Force` reads it again. | Schema cache |
-| 4.3 | **Copy the shape** of the answer for one table: `(Get-OmadaSqlSchema -DataConnection '<dc>' -Name 'dbo.tblDataObject').Column`. | Column names and types as SQL Server Management Studio shows them. Note any entry the module did not split as expected (a type with spaces, a column without a type). | Column entry format |
-| 4.4 | The largest data connection the tenant has: 4.1 against it. | Completes; note the time and the number of tables. | Large schemas |
-| 4.5 | `Test-OmadaSqlQuery -Query 'SELECT [n] = o.DisplayNam FROM dbo.tblDataObject AS o JOIN dbo.NoSuchTable AS t ON 1 = 1' -DataConnection '<dc>'` and the same without the join. | OMD030 for the unknown table; without the join, OMD031 for the column. | Schema rules |
-| 4.6 | `Test-OmadaSqlQuery -Path` on three or four real queries the team uses. | No false schema findings. Note every finding that is wrong. | Schema-rule noise |
+| 4.1 | auto | Reads the schema with `-Force`, then from the cache. | Tables found; the cached read is faster. In observations: counts and times. |
+| 4.3 | auto | *Observes* column entries the module could not split. | No column without a name. In observations: `WithoutType` and `TypesWithSpaces` should be empty or explainable. |
+| 4.4 | auto | Reads the schema of the second data connection (needs `-SecondDataConnection`). | Tables found. In observations: size and time. |
+| 4.5 | auto | Checks an unknown table, an unknown column and a known column of a table from the schema. | OMD030, OMD031, and no finding. |
+| 4.6 | auto | Checks the team's queries (needs `-QueryPath`); *observes* the findings. | Review every OMD030 to OMD032 finding in observations: each wrong one is a false positive. |
 
 ## 5. Export
 
-| # | Step | Expected | Settles |
+| # | How | Step | Expected |
 |---|---|---|---|
-| 5.1 | `Invoke-OmadaSqlQuery ... \| Export-OmadaSqlResult -Path .\osqltest.csv -Encoding UTF8BOM -Force`, open in Excel with Dutch regional settings. | Opens in columns (semicolon) with characters outside ASCII intact. | CSV defaults |
-| 5.2 | The same with `-Format Json`, `Xml` and `Text`. | Readable; dates in ISO 8601. | Other formats |
-| 5.3 | An id column as `-Format SqlArray`, pasted into `WHERE Id IN ...` in SQL Troubleshooting. | Runs. | SqlArray literals |
+| 5.1 | auto | CSV with `-Encoding UTF8BOM`. | Byte order mark, header `"Id";"Name"`. |
+| 5.2 | auto | JSON, XML and Text. | Each reads back. |
+| 5.3 | auto | An `SqlArray` of ids used in an `IN` list. | The query runs and counts 3. |
+| 5.4 | manual | Open the CSV of 5.1 in Excel with Dutch regional settings. | Columns split on the semicolon; characters outside ASCII intact. |
 
 ## 6. Cleanup and purge
 
-| # | Step | Expected | Settles |
+| # | How | Step | Expected |
 |---|---|---|---|
-| 6.1 | As the regular user, `Clear-OmadaSqlTempQuery -Purge`. | Soft delete works; the purge is refused with a message that names the System, Operation or Data Administrator role. | Purge permission message |
-| 6.2 | As the administrator, `Clear-OmadaSqlTempQuery -Purge`, then `Get-OmadaSqlTempQuery`. | This profile's temporary objects are gone, also from the deleted list. | `PurgeDataObject` |
-| 6.3 | Remove the `OSQLTEST` objects: `Get-OmadaSqlQuery -Name 'OSQLTEST*' \| Remove-OmadaSqlQuery`, then purge them in the web UI if wanted. | No test objects left. | - |
-| 6.4 | Restore the settings file renamed in P4. | - | - |
+| 6.1 | auto | `Clear-OmadaSqlTempQuery -Purge` as the regular user (User pass). | Refused with a message that names the administrator roles. |
+| 6.2 | auto | The same as the administrator (Administrator pass). | No temporary objects of this profile are left. |
+| 6.3 | manual | Purge the soft-deleted `OSQLTEST` objects in the web UI, if wanted. | No test objects left. |
 
 ## 7. Unattended run
 
-| # | Step | Expected | Settles |
+| # | How | Step | Expected |
 |---|---|---|---|
-| 7.1 | The scheduled-task example from the README as a Windows scheduled task under a service account. | The file is written; the task exits with 0. | Unattended use |
-| 7.2 | The same with an invalid certificate thumbprint. | The task fails with a clear error and exits non-zero, without waiting for a browser. | `-NoInteractiveAuthentication` |
+| 7.1 | manual | The scheduled-task example from the README, as a Windows scheduled task under a service account. | The file is written; the task exits with 0. |
+| 7.2 | manual | The same with an invalid certificate thumbprint. | The task fails with a clear error and a non-zero exit code, without waiting for a browser. |
