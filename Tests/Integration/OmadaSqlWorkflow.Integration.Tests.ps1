@@ -113,9 +113,12 @@ Describe 'Invoke-OmadaSqlQuery against a mock tenant' -Tag 'Integration' {
         $Rows = @(Invoke-OmadaSqlQuery -Query 'SELECT [Id] = Nope FROM dbo.tblDataObject' -DataConnection 'OISES' -ErrorVariable Failed -ErrorAction SilentlyContinue)
 
         $Rows.Count | Should -Be 0
-        $Failed.Count | Should -Be 1
-        $Failed[0].FullyQualifiedErrorId | Should -BeLike 'OmadaSql.ServerError*'
-        $Failed[0].Exception.Message | Should -BeLike 'Statement 1 (line 1) failed:*ExecuteQuery*'
+        # -ErrorVariable also collects the errors commands inside OmadaWeb.PS write and handle
+        # themselves; the one Invoke-OmadaSqlQuery reports carries its own name in the error id.
+        $Reported = @($Failed | Where-Object { $_.FullyQualifiedErrorId -like '*,Invoke-OmadaSqlQuery' })
+        $Reported.Count | Should -Be 1
+        $Reported[0].FullyQualifiedErrorId | Should -BeLike 'OmadaSql.ServerError*'
+        $Reported[0].Exception.Message | Should -BeLike 'Statement 1 (line 1) failed:*ExecuteQuery*'
         (Get-TestRequestLine)[-1] | Should -Be "DELETE $($Script:Entity)(7001)"
     }
 
