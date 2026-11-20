@@ -24,6 +24,8 @@ tenant or documentation before it is relied on.
 | Schema rules | OMD030 (table not in the schema), OMD031 (column not in the schema), OMD032 (ambiguous column), all **Info**, so they never block: the schema is a cached copy. They run only in `Test-OmadaSqlQuery -DataConnection`, against each statement's own data connection; `Invoke-OmadaSqlQuery` does not read the schema, so a run costs no extra request. A query scope with a derived table, function, CTE, temporary table or unresolved table among its own sources is not checked for columns (no guessing). The checks follow OmadaSqlTroubleshooter's schema pass, which has no rule ids; the ids are this module's. |
 | Export | `Export-OmadaSqlResult` with a format registry (`Get-OmadaSqlExportFormat`, `Register-OmadaSqlExportFormat`; built-in formats cannot be replaced). Built in: Csv, Json, Xml, Text, SqlArray, PowerShellArray. Without `-Format` the format follows the `-Path` extension, as the Troubleshooter's Save As does. Output is culture-independent (invariant numbers, ISO 8601 dates) and UTF-8, by default without a byte order mark (`-Encoding UTF8BOM` for Excel); an existing file is only replaced with `-Force`. |
 | Export, deviations from OmadaSqlTroubleshooter | CSV uses a semicolon by default, as the Troubleshooter does (`-Option @{ Delimiter = ',' }` for a comma); a null value is an empty unquoted field. Xml is a plain `<Result><Row><Field Name>` document instead of `Export-Clixml`, so any XML tool can read it. Json is the array of rows, not the whole `{ d: ... }` response. SqlArray and PowerShellArray type each column from its values (a column of canonical numbers is unquoted, `007` stays text), not from the schema. |
+| SBOM | A CycloneDX 1.5 SBOM per nightly and release (`OmadaSql.PS.<version>.cdx.json`, a release asset beside the `.nupkg`), built by `Build/New-Sbom.ps1` from `Build/DependencyLock.psd1` only: the bundled parser package with its SHA-256, license, source URL and the two files taken from it, each with its hash. No timestamp or serial number, so the same lock and version give the same document. OmadaWeb.PS is a required module installed from the Gallery, not part of the package, and is not listed. |
+| Integration tests | `Tests/Integration` runs the public commands through the real OmadaWeb.PS against the `HttpListener` mock and asserts the request sequence: ad-hoc run (probe, create, execute, soft delete), reuse of a soft-deleted slot (undelete, update), cleanup after a failing statement, a saved object run without writes, export to CSV, schema read and caching, schema checks, and temporary-object purge. |
 | Live tenant tests | None for now (no test tenant). Integration tests use a local `HttpListener` mock of the Omada endpoints. |
 | Generic bulk undelete / purge of other object types | **Parked.** Out of scope for this module for now; a separate module later can share the request and OData listing helpers. Only `TMP_` cleanup is built here. |
 | Quality gates | Required for every pull request: PSComplexity (15 cyclomatic / 15 cognitive per function, empty baseline) and PSMutant (75% over the changed files and 75% for each file, an owning unit test file for every changed source file, uncovered lines mutated too). |
@@ -83,8 +85,8 @@ Each phase is one pull request, test first.
    database-name resolution, rules and syntax checker.
 4. **Execution** *(done)* - saved and ad-hoc queries, slot pool with mutex, multi-statement, result objects,
    `Get-OmadaSqlTempQuery` and `Clear-OmadaSqlTempQuery`.
-5. **Schema and export** *(in progress)* - schema model and cache, schema rules, export format registry.
-6. **Integration and release** - `HttpListener` mock of the Omada endpoints, README, first nightly.
+5. **Schema and export** *(done)* - schema model and cache, schema rules, export format registry.
+6. **Integration and release** *(in progress)* - `HttpListener` mock of the Omada endpoints, README, first nightly.
 
 ## Deleted objects
 
@@ -115,7 +117,6 @@ first letter upper case (`Identity`, `Resource`), while OmadaSqlTroubleshooter s
 | Whether SQL Troubleshooting history rows carry a 'Create' change type, used for CreatedBy in -Detailed | Inspect a history on a tenant; without it the oldest entry is used |
 | Whether `SqlDataProducer` honours `page` > 1 for results over 100 000 rows | Tenant test; until then an explicit error above the limit |
 | The response Omada returns for a failing SQL statement | Expected: generic HTTP 500, `The query pipeline failed at step 'ExecuteQuery'`. Confirm the body shape with a tenant test |
-| An SBOM for the bundled parser | Moved to phase 6 (release): generated with the release package |
 | Whether SQL Troubleshooting rejects `DECLARE` (named as unavailable, not yet confirmed) | Tenant test before a rule is added for it |
 
 ## One-time repository settings (maintainer)

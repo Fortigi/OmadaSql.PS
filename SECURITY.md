@@ -62,7 +62,9 @@ In scope:
 - How the module creates, reuses and removes temporary SQL Troubleshooting objects in the tenant.
 - How the module loads bundled assemblies (the SQL parser used by the syntax checker). The parser is
   pinned by version and SHA-256 in `Build/DependencyLock.psd1`; the build refuses a package or file
-  whose hash differs, and the module downloads nothing at run time.
+  whose hash differs, and the module downloads nothing at run time. Every nightly and release has
+  a CycloneDX SBOM (`OmadaSql.PS.<version>.cdx.json`) next to the package, built from that lock
+  file by `Build/New-Sbom.ps1`, with the package and file hashes.
 
 Out of scope:
 

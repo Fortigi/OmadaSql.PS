@@ -8,9 +8,14 @@
         ...
         Stop-OmadaSqlMockServer -Server $Server
 
+    A route matches the method and the path with its query exactly; a route set with -AnyQuery
+    matches the method and the path whatever the query. The exact route wins. A route given several
+    -Body values answers them in turn and then keeps answering the last one, for a sequence such as
+    "not there yet, then created".
+
     A request without a route gets 200 with '{}', which also answers the site-root probe OmadaWeb.PS
-    makes the first time it sees a base URL. Every request is recorded (method, path and query,
-    content type, body as UTF-8 text) in $Server.Shared.Requests.
+    makes the first time it sees a base URL. Every request is recorded (method, path and query, path
+    alone, query decoded, content type, body as UTF-8 text) in $Server.Shared.Requests.
 
     A runspace rather than Start-ThreadJob: ThreadJob is not part of Windows PowerShell 5.1, and the
     tests run on both editions.
@@ -58,18 +63,26 @@ function Start-OmadaSqlMockServer {
                         $RequestBody = $Reader.ReadToEnd()
                         $Reader.Dispose()
                         $PathAndQuery = $Context.Request.Url.PathAndQuery
+                        $AbsolutePath = $Context.Request.Url.AbsolutePath
                         $null = $Shared.Requests.Add([pscustomobject]@{
-                                Method      = $Context.Request.HttpMethod
-                                Path        = $PathAndQuery
-                                ContentType = $Context.Request.ContentType
-                                Body        = $RequestBody
+                                Method       = $Context.Request.HttpMethod
+                                Path         = $PathAndQuery
+                                AbsolutePath = $AbsolutePath
+                                Query        = [System.Uri]::UnescapeDataString($Context.Request.Url.Query)
+                                ContentType  = $Context.Request.ContentType
+                                Body         = $RequestBody
                             })
 
                         $Route = $Shared.Routes[('{0} {1}' -f $Context.Request.HttpMethod, $PathAndQuery)]
                         if ($null -eq $Route) {
-                            $Route = @{ StatusCode = 200; Body = '{}' }
+                            $Route = $Shared.Routes[('{0} {1} *' -f $Context.Request.HttpMethod, $AbsolutePath)]
                         }
-                        $Bytes = [System.Text.Encoding]::UTF8.GetBytes([string]$Route.Body)
+                        if ($null -eq $Route) {
+                            $Route = @{ StatusCode = 200; Body = @('{}'); Served = 0 }
+                        }
+                        $Index = [System.Math]::Min([int]$Route.Served, $Route.Body.Count - 1)
+                        $Route.Served = [int]$Route.Served + 1
+                        $Bytes = [System.Text.Encoding]::UTF8.GetBytes([string]$Route.Body[$Index])
                         $Context.Response.StatusCode = [int]$Route.StatusCode
                         $Context.Response.ContentType = 'application/json; charset=utf-8'
                         $Context.Response.ContentLength64 = $Bytes.Length
@@ -124,10 +137,16 @@ function Set-OmadaSqlMockRoute {
 
         [int]$StatusCode = 200,
 
-        [string]$Body = '{}'
+        [string[]]$Body = @('{}'),
+
+        [switch]$AnyQuery
     )
 
-    $Server.Shared.Routes[('{0} {1}' -f $Method.ToUpperInvariant(), $Path)] = @{ StatusCode = $StatusCode; Body = $Body }
+    $Key = '{0} {1}' -f $Method.ToUpperInvariant(), $Path
+    if ($AnyQuery) {
+        $Key = '{0} *' -f $Key
+    }
+    $Server.Shared.Routes[$Key] = [hashtable]::Synchronized(@{ StatusCode = $StatusCode; Body = [string[]]$Body; Served = 0 })
 }
 
 function Reset-OmadaSqlMockServer {
