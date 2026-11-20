@@ -158,6 +158,11 @@ jobs:
             -Properties "VERSION=${{ env.BUILD_VERSION }};YEAR=${{ env.YEAR }}" `
             -OutputDirectory staging/
 
+      # The CycloneDX SBOM of what the package bundles (the T-SQL parser), from DependencyLock.psd1.
+      - name: Generate SBOM
+        shell: pwsh
+        run: ./Build/New-Sbom.ps1 -Version '${{ env.BUILD_VERSION }}-nightly' -OutputPath 'staging/OmadaSql.PS.${{ env.BUILD_VERSION }}-nightly.cdx.json'
+
       - name: Create Git tag
         shell: pwsh
         run: |
@@ -172,5 +177,7 @@ jobs:
           tag_name: v${{ env.BUILD_VERSION }}-nightly
           name: Nightly Build v${{ env.BUILD_VERSION }}
           prerelease: true
-          files: staging/*.nupkg
+          files: |
+            staging/*.nupkg
+            staging/*.cdx.json
           generate_release_notes: true

@@ -101,7 +101,9 @@ Dependabot proposes new versions in `Build/Dependencies/Dependencies.csproj`. On
 ```
 
 to pin the new hashes, review the diff of `Build/DependencyLock.psd1`, and commit it.
-`Tests/Unit/DependencyLock.Tests.ps1` fails while the two disagree.
+`Tests/Unit/DependencyLock.Tests.ps1` fails while the two disagree. The SBOM attached to each
+nightly and release (`Build/New-Sbom.ps1`) is built from the same lock file, so it follows without
+a separate change.
 
 ## Pinning GitHub Actions
 
