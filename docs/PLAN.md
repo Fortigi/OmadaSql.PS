@@ -109,6 +109,8 @@ first letter upper case (`Identity`, `Resource`), while OmadaSqlTroubleshooter s
 
 ## Open items (to verify, not assume)
 
+[TENANT-TEST.md](TENANT-TEST.md) is the checklist that settles these on a test tenant.
+
 | Item | How to settle it |
 |---|---|
 | Whether a non-admin account can list deleted objects via OData (`deletedStatus=Deleted`) | Tenant test |
