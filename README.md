@@ -16,9 +16,9 @@ All sign-in and every request go through [OmadaWeb.PS](https://github.com/Fortig
 every authentication type it supports is available, including unattended OAuth with a client
 certificate.
 
-> **Status: in development.** The connection, data connection and object management commands are in place; the rest is being built phase
-> by phase as described in [docs/PLAN.md](docs/PLAN.md). Nothing is published to the PowerShell
-> Gallery yet.
+> **Status: in development.** All planned commands are in place; integration tests and the first
+> release follow, as described in [docs/PLAN.md](docs/PLAN.md). Nothing is published to the
+> PowerShell Gallery yet.
 
 ## COMMANDS
 
@@ -29,13 +29,17 @@ certificate.
 | `Clear-OmadaSqlTempQuery` | Deletes, and with -Purge permanently removes, temporary SQL Troubleshooting objects. |
 | `Connect-OmadaSql` | Connects to an Omada Identity Cloud tenant for SQL Troubleshooting commands. |
 | `Disconnect-OmadaSql` | Removes a connection made with Connect-OmadaSql. |
+| `Export-OmadaSqlResult` | Writes query result rows as CSV, JSON, XML, a text table, or T-SQL or PowerShell literals. |
 | `Get-OmadaSqlConnection` | Returns the current connection, or every connection. |
 | `Get-OmadaSqlDataConnection` | Lists the data connections SQL Troubleshooting queries can run against. |
+| `Get-OmadaSqlExportFormat` | Lists the formats Export-OmadaSqlResult can write. |
 | `Get-OmadaSqlQuery` | Gets SQL Troubleshooting objects from Omada. |
 | `Get-OmadaSqlQueryHistory` | Gets the full change history of a SQL Troubleshooting object. |
+| `Get-OmadaSqlSchema` | Lists the tables and views of a data connection, with their columns and data types. |
 | `Get-OmadaSqlTempQuery` | Lists the temporary SQL Troubleshooting objects that ad-hoc queries run through. |
 | `Invoke-OmadaSqlQuery` | Runs a SQL query on an Omada Identity Cloud tenant through SQL Troubleshooting. |
 | `New-OmadaSqlQuery` | Creates a SQL Troubleshooting object in Omada. |
+| `Register-OmadaSqlExportFormat` | Adds an export format to Export-OmadaSqlResult for this session. |
 | `Remove-OmadaSqlQuery` | Deletes a SQL Troubleshooting object in Omada. |
 | `Restore-OmadaSqlQuery` | Restores a deleted SQL Troubleshooting object. |
 | `Set-OmadaSqlQuery` | Changes the name, SQL text or data connection of a SQL Troubleshooting object. |
@@ -44,16 +48,6 @@ certificate.
 _Generated from the comment-based help by `Build/Update-ReadmeHelp.ps1`. Run `Get-Help <Command> -Full` for syntax, parameters and examples._
 
 <!-- END GENERATED COMMANDS -->
-
-## PLANNED COMMANDS
-
-| Area | Commands |
-|---|---|
-| Query execution | `Invoke-OmadaSqlQuery` (existing SQL Troubleshooting objects, or ad-hoc SQL through a temporary query object; database-name prefixes and `USE` resolved to data connections) |
-| Validation | Schema warnings in `Test-OmadaSqlQuery`; `-SkipValidation` on `Invoke-OmadaSqlQuery` |
-| Schema | `Get-OmadaSqlSchema` |
-| Temporary objects | `Get-OmadaSqlTempQuery`, `Clear-OmadaSqlTempQuery` |
-| Export | `Export-OmadaSqlResult`, `Register-OmadaSqlExportFormat`, `Get-OmadaSqlExportFormat` |
 
 ## REQUIREMENTS
 
@@ -92,6 +86,13 @@ Connect-OmadaSql -Url 'https://tenant.omada.cloud' -AuthenticationType OAuth `
 
 # Interactive
 Connect-OmadaSql -Url 'https://tenant.omada.cloud'
+
+# Check a query, including its table and column names, then run it and write a CSV file
+Test-OmadaSqlQuery -Path .\Export.sql -DataConnection 'OISES'
+Invoke-OmadaSqlQuery -Path .\Export.sql -DataConnection 'OISES' | Export-OmadaSqlResult -Path .\export.csv -Force
+
+# Run a saved SQL Troubleshooting object and turn its ids into an IN list
+Invoke-OmadaSqlQuery -Name 'Deleted identities' | Export-OmadaSqlResult -Format SqlArray
 ```
 
 Every command throws a terminating error whose `FullyQualifiedErrorId` starts with
@@ -105,6 +106,9 @@ Every command throws a terminating error whose `FullyQualifiedErrorId` starts wi
 | `MissingPermission` | A write over OData was refused after a successful read: the identity lacks Create, Update or Delete on the `OData` auth element. |
 | `AccessDenied`, `NotFound`, `ServerError`, `RequestFailed` | HTTP 403, 404, 5xx and anything else. A SQL error arrives as a generic 500. |
 | `InvalidArgument` | A parameter combination was refused before anything was sent. |
+| `ValidationFailed` | `Invoke-OmadaSqlQuery` found a blocking rule finding and sent nothing (see `Test-OmadaSqlQuery`). |
+| `Busy` | Every temporary query slot of this profile stayed in use until the timeout. |
+| `InvalidResult` | Omada answered with something the module cannot use, such as a result larger than one page. |
 
 `-Verbose` shows each request (method, URI, duration, outcome); secrets are masked and request
 bodies, which can hold query text, are never written.

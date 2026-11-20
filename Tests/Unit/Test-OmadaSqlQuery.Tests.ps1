@@ -52,6 +52,52 @@ Describe 'Test-OmadaSqlQuery' -Tag 'Unit' {
     }
 }
 
+Describe 'Test-OmadaSqlQuery -DataConnection' -Tag 'Unit' {
+    BeforeEach {
+        $Script:Connection = Initialize-OmadaSqlTestConnection
+        Mock Get-OmadaSqlDataConnectionList -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ Name = 'OISES'; Id = 1001 } }
+        Mock Get-OmadaSqlSchemaData -ModuleName 'OmadaSql.PS' { [pscustomobject]@{ 'dbo.Person' = @('Id int') } }
+    }
+
+    It 'Adds the schema findings to the rule findings, in position order' {
+        $Diagnostic = @(Test-OmadaSqlQuery -Query "SELECT [a] = Nope,`n COUNT(*) FROM dbo.Person" -DataConnection 'OISES')
+        @($Diagnostic.RuleId) | Should -Be @('OMD031', 'OMD001')
+        @($Diagnostic.Line) | Should -Be @(1, 2)
+    }
+
+    It 'Sorts findings on the same line by column' {
+        $Diagnostic = @(Test-OmadaSqlQuery -Query 'SELECT [a] = Nope, COUNT(*) FROM dbo.Person' -DataConnection 'OISES')
+        @($Diagnostic.RuleId) | Should -Be @('OMD031', 'OMD001')
+    }
+
+    It 'Keeps -Quiet true for schema findings, which are Info' {
+        Test-OmadaSqlQuery -Query 'SELECT [a] = Nope FROM dbo.Person' -DataConnection 'OISES' -Quiet | Should -BeTrue
+        Test-OmadaSqlQuery -Query 'SELECT [a] = Nope FROM dbo.Person' -DataConnection 'OISES' -RuleSeverity @{ OMD031 = 'Warning' } -Quiet | Should -BeFalse
+    }
+
+    It 'Reads no schema without -DataConnection' {
+        @(Test-OmadaSqlQuery -Query 'SELECT [a] = Nope FROM dbo.Person').Count | Should -Be 0
+        Should -Invoke Get-OmadaSqlSchemaData -ModuleName 'OmadaSql.PS' -Times 0 -Exactly
+    }
+
+    It 'Uses the connection given with -Connection' {
+        $First = $Script:Connection
+        $null = Connect-OmadaSql -Url 'https://other.omada.cloud' -AuthenticationType OAuth -ClientId 'client' -OAuthCertificateThumbprint 'AB12' -SkipConnectionTest -PassThru
+        @(Test-OmadaSqlQuery -Query 'SELECT [a] = Nope FROM dbo.Person' -DataConnection 'OISES' -Connection $First).RuleId | Should -Be @('OMD031')
+        $Cached = InModuleScope 'OmadaSql.PS' -Parameters @{ First = $First } {
+            param($First)
+            (Get-OmadaSqlConnectionContext -Connection $First).ContainsKey('SchemaCache')
+            (Get-OmadaSqlConnectionContext).ContainsKey('SchemaCache')
+        }
+        $Cached | Should -Be @($true, $false)
+    }
+
+    It 'Fails with NotConnected for -DataConnection without a connection' {
+        Disconnect-OmadaSql -All
+        { Test-OmadaSqlQuery -Query 'SELECT [a] = 1' -DataConnection 'OISES' } | Should -Throw -ErrorId 'OmadaSql.NotConnected,Test-OmadaSqlQuery'
+    }
+}
+
 Describe 'Test-OmadaSqlQuery parameter contract' -Tag 'Unit' {
     # Parameter declarations run no code a test could observe, so the mutation gate's mutants of
     # Mandatory, Position, pipeline binding and ValidateRange are caught only by asserting the contract.

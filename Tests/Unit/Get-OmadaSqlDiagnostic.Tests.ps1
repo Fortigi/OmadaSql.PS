@@ -53,8 +53,15 @@ Describe 'Resolve-OmadaSqlRuleSeverity' -Tag 'Unit' {
     It 'Returns every rule at its default without overrides' {
         InModuleScope 'OmadaSql.PS' {
             $Severity = Resolve-OmadaSqlRuleSeverity -RuleSeverity $null
-            $Severity.Count | Should -Be @(Get-OmadaSqlRule).Count
+            $Severity.Count | Should -Be (@(Get-OmadaSqlRule).Count + @(Get-OmadaSqlSchemaRule).Count)
             $Severity.OMD001 | Should -Be 'Warning'
+            $Severity.OMD030 | Should -Be 'Info'
+        }
+    }
+
+    It 'Accepts an override of a schema rule' {
+        InModuleScope 'OmadaSql.PS' {
+            (Resolve-OmadaSqlRuleSeverity -RuleSeverity @{ OMD031 = 'Off' }).OMD031 | Should -Be 'Off'
         }
     }
 
