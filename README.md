@@ -16,9 +16,9 @@ All sign-in and every request go through [OmadaWeb.PS](https://github.com/Fortig
 every authentication type it supports is available, including unattended OAuth with a client
 certificate.
 
-> **Status: in development.** All planned commands are in place; integration tests and the first
-> release follow, as described in [docs/PLAN.md](docs/PLAN.md). Nothing is published to the
-> PowerShell Gallery yet.
+> **Status: pre-release.** All planned commands are in place and covered by unit and integration
+> tests; the first nightly is the next step, see [docs/PLAN.md](docs/PLAN.md). Nothing is published
+> to the PowerShell Gallery yet, and the module has not yet been run against a live tenant.
 
 ## COMMANDS
 
@@ -60,7 +60,8 @@ _Generated from the comment-based help by `Build/Update-ReadmeHelp.ps1`. Run `Ge
   object.
 
 The module bundles Microsoft's T-SQL parser, Microsoft.SqlServer.TransactSql.ScriptDom (MIT), to
-validate queries locally; see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
+validate queries locally; see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md). Each release has a
+CycloneDX SBOM (`OmadaSql.PS.<version>.cdx.json`) next to the package.
 
 ## INSTALLATION
 
@@ -94,6 +95,26 @@ Invoke-OmadaSqlQuery -Path .\Export.sql -DataConnection 'OISES' | Export-OmadaSq
 # Run a saved SQL Troubleshooting object and turn its ids into an IN list
 Invoke-OmadaSqlQuery -Name 'Deleted identities' | Export-OmadaSqlResult -Format SqlArray
 ```
+
+For a scheduled task, connect with `-NoInteractiveAuthentication`, so an expired session fails
+instead of waiting for a browser sign-in, and stop on the first error:
+
+```powershell
+$ErrorActionPreference = 'Stop'
+Connect-OmadaSql -Url 'https://tenant.omada.cloud' -AuthenticationType OAuth -NoInteractiveAuthentication `
+    -ClientId '<application id>' -OAuthCertificateThumbprint '<thumbprint>' -EntraIdTenantId '<tenant>'
+Invoke-OmadaSqlQuery -Name 'Daily export' | Export-OmadaSqlResult -Path 'D:\Exports\daily.csv' -Encoding UTF8BOM -Force
+Disconnect-OmadaSql
+```
+
+### Temporary query objects
+
+Ad-hoc SQL runs through a temporary SQL Troubleshooting object, as in OmadaSqlTroubleshooter. Each
+user profile uses a small fixed pool (`TMP_<profile id>_<n>`, at most `MaxTempQuerySlots`, default 4,
+in `%LOCALAPPDATA%\OmadaSql.PS\settings.json`): a slot is restored, filled, run and soft-deleted
+again, and runs at the same time each lease their own slot. `Get-OmadaSqlTempQuery` lists the
+profile's objects and `Clear-OmadaSqlTempQuery -Purge` removes them for good (purging needs the
+System, Operation or Data Administrator role). A saved object is never changed by running it.
 
 Every command throws a terminating error whose `FullyQualifiedErrorId` starts with
 `OmadaSql.<Kind>`, so a script can act on the cause without parsing messages:
