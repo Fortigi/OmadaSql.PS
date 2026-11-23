@@ -62,7 +62,7 @@ jobs:
       head_sha: ${{ steps.resolve.outputs.head_sha }}
     steps:
       - name: Harden the runner (audit all outgoing network calls)
-        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
         with:
           egress-policy: audit
 
@@ -163,7 +163,7 @@ jobs:
 
     steps:
       - name: Harden the runner (audit all outgoing network calls)
-        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
         with:
           egress-policy: audit
 
@@ -359,7 +359,7 @@ jobs:
       statuses: write
     steps:
       - name: Harden the runner (audit all outgoing network calls)
-        uses: step-security/harden-runner@ccd8616d44fd3846e67624a50d5aad6d37bf2d25 # v2.22.1
+        uses: step-security/harden-runner@aebdcf6156ab6691adf63218240e476564a1ed4c # v2.23.0
         with:
           egress-policy: audit
 
